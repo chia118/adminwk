@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者後端 | 人員動態與紀錄管理</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #7d6e63;
+      --primary-hover: #63564d;
+      --bg: #f7f5f0;
+      --card-bg: #ffffff;
+      --border: #eae5df;
+      --text: #4a403a;
+      --muted: #9e938a;
+    }
+
+    body { font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+    .container { max-width: 900px; margin: 0 auto; background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
+    h1 { font-size: 1.3rem; color: var(--primary); margin: 0; }
+    .btn-refresh { padding: 8px 14px; background-color: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .btn-refresh:hover { background-color: var(--primary-hover); }
+
+    /* 頁籤 */
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab-btn { padding: 10px 16px; background: none; border: none; color: var(--muted); font-size: 0.95rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 控制面板 */
+    .filter-panel { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; background: #faf9f7; padding: 12px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
+    select, input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; background: #fff; font-size: 0.9rem; }
+    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--primary); }
+
+    /* 表格 */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+    th { background-color: #faf9f7; color: var(--primary); font-weight: 600; }
+    
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 500; }
+    .tag-上班 { background-color: #e8f3ec; color: #3d7a5a; }
+    .tag-下班 { background-color: #fbeee9; color: #b56247; }
+    
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; color: #3d7a5a; font-weight: 600; }
+    .status-dot { width: 8px; height: 8px; background-color: #3d7a5a; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .btn-action { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88rem; font-weight: 500; }
+    .btn-delete { background-color: #fbeee9; color: #b56247; padding: 4px 8px; font-size: 0.8rem; }
+    .btn-delete:hover { background-color: #f7d2c4; }
+    .btn-add { background-color: var(--primary); color: white; }
+    .btn-add:hover { background-color: var(--primary-hover); }
+    .loading { text-align: center; color: var(--muted); padding: 24px 0; }
+
+    /* Modal 彈出視窗 */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .modal-header { font-weight: 600; margin-bottom: 16px; color: var(--primary); }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--muted); }
+    .form-group input, .form-group select { width: 100%; box-sizing: border-box; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ 全員動態與後端管理控制台</h1>
+      <button class="btn-refresh" onclick="loadAllData()">🔄 刷新資料</button>
+    </div>
+
+    <!-- 頁籤導覽 -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('activeTab')">🟢 當前上班人員</button>
+      <button class="tab-btn" onclick="switchTab('historyTab')">📋 個人打卡紀錄</button>
+      <button class="tab-btn" onclick="switchTab('salaryTab')">💰 薪資計算</button>
+    </div>
+
+    <!-- 分頁一：當前上班人員 -->
+    <div id="activeTab" class="tab-content active">
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>狀態</th>
+            <th>上班時間</th>
+            <th>上班地點</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody id="activeTableBody">
+          <tr><td colspan="5" class="loading">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分頁二：個人打卡紀錄 -->
+    <div id="historyTab" class="tab-content">
+      <div class="filter-panel">
+        <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字..." oninput="renderHistory()">
+        <select id="rangeFilter" onchange="renderHistory()">
+          <option value="daily">當天 (Daily)</option>
+          <option value="weekly">本週 (Weekly)</option>
+          <option value="3months" selected>近三個月 (3 Months)</option>
+        </select>
+        <button class="btn-action btn-add" style="margin-left: auto;" onclick="openAddModal()">＋ 管理者補打卡</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>日期</th>
+            <th>時間</th>
+            <th>地點</th>
+            <th>狀態</th>
+            <th>備註</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分頁三：薪資計算 -->
+    <div id="salaryTab" class="tab-content">
+      <div class="filter-panel">
+        <input type="text" id="salaryNameInput" placeholder="請輸入姓名或關鍵字">
+        <span style="font-size:0.85rem; color:var(--muted);">開始時間：</span>
+        <input type="date" id="salaryStartDate">
+        <span style="font-size:0.85rem; color:var(--muted);">結束時間：</span>
+        <input type="date" id="salaryEndDate">
+        <button class="btn-action btn-add" onclick="calculateSalary()">🧮 計算薪資</button>
+      </div>
+
+      <div id="salaryResultArea" style="display: none;">
+        <table>
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>日期</th>
+              <th>上下班時間</th>
+              <th>地點</th>
+              <th>自收現金 ($)</th>
+              <th>時長</th>
+            </tr>
+          </thead>
+          <tbody id="salaryTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="salaryEmptyTip" class="loading">
+        請輸入姓名與選擇時間範圍後點擊「計算薪資」
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理者補打卡 Modal -->
+  <div id="addModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">管理者手動新增/補打卡</div>
+      <div class="form-group">
+        <label>姓名</label>
+        <input type="text" id="modalName" placeholder="請輸入姓名">
+      </div>
+      <div class="form-group">
+        <label>類別</label>
+        <select id="modalType">
+          <option value="上班">上班</option>
+          <option value="下班">下班</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="modalDate">
+      </div>
+      <div class="form-group">
+        <label>時間</label>
+        <input type="time" id="modalTime" value="09:00">
+      </div>
+      <div class="form-group">
+        <label>地點</label>
+        <input type="text" id="modalLocation" placeholder="例：OW、9p、sky、八度">
+      </div>
+      <div class="form-group">
+        <label>備註</label>
+        <input type="text" id="modalNote" placeholder="選填（例如：自收100）">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-action" onclick="closeAddModal()">取消</button>
+        <button class="btn-action btn-add" onclick="submitAddRecord()">新增打卡</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 已更新為最新的 GAS 部署網址
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-7aoagATYQ4im3FeLQqw5hyuamaCulTKxxB_jZE1bsIIuZrHtLbBMqkdqq4XPtRny/exec';
+
+    let rawData = [];
+
+    function formatDate(rawVal) {
+      if (!rawVal) return '';
+      const str = String(rawVal).trim();
+      if (str.includes('T')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      }
+      return str.split('T')[0].split(' ')[0];
+    }
+
+    function formatTime(rawVal) {
+      if (!rawVal) return '';
+      const str = String(rawVal).trim();
+      if (str.includes('T')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          const hours = String(d.getHours()).padStart(2, '0');
+          const mins = String(d.getMinutes()).padStart(2, '0');
+          return `${hours}:${mins}`;
+        }
+      }
+      return str.length > 5 ? str.substring(0, 5) : str;
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      if (tabId === 'activeTab') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('activeTab').classList.add('active');
+      } else if (tabId === 'historyTab') {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('historyTab').classList.add('active');
+      } else if (tabId === 'salaryTab') {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('salaryTab').classList.add('active');
+      }
+    }
+
+    function getTodayStr() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function loadAllData() {
+      document.getElementById('activeTableBody').innerHTML = '<tr><td colspan="5" class="loading">最新資料載入中...</td></tr>';
+      
+      const keyword = document.getElementById('nameSearchInput').value.trim();
+      if (!keyword) {
+        document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>';
+      }
+
+      fetch(GAS_URL)
+        .then(res => res.json())
+        .then(res => {
+          if (res.result === 'success') {
+            rawData = res.data.map((row, idx) => ({
+              rowIndex: idx + 2,
+              name: String(row[0] || '').trim(),
+              date: formatDate(row[1]),
+              time: formatTime(row[2]),
+              location: String(row[3] || '').trim(),
+              type: String(row[4] || '').trim(),
+              note: String(row[5] || '').trim()
+            }));
+
+            renderActiveUsers();
+            renderHistory();
+          }
+        })
+        .catch(err => alert('資料載入失敗，請確認網路與 GAS 部署！'));
+    }
+
+    function renderActiveUsers() {
+      const tbody = document.getElementById('activeTableBody');
+      const todayStr = getTodayStr();
+
+      const todayRecords = rawData.filter(r => r.date === todayStr);
+
+      const userStatusMap = {};
+      todayRecords.forEach(r => {
+        userStatusMap[r.name] = { lastType: r.type, lastTime: r.time, location: r.location, note: r.note };
+      });
+
+      const activeUsers = Object.keys(userStatusMap).filter(name => userStatusMap[name].lastType === '上班');
+
+      if (activeUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">目前無人上班中</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      activeUsers.forEach(name => {
+        const info = userStatusMap[name];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${name}</strong></td>
+          <td><span class="status-badge"><span class="status-dot"></span> 上班中</span></td>
+          <td>${info.lastTime}</td>
+          <td>📍 ${info.location}</td>
+          <td>${info.note || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById('historyTableBody');
+      const keyword = document.getElementById('nameSearchInput').value.trim().toLowerCase();
+      const selectedRange = document.getElementById('rangeFilter').value;
+
+      if (keyword === '') {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>';
+        return;
+      }
+
+      const now = new Date();
+      const todayStr = getTodayStr();
+
+      let filtered = rawData.filter(r => {
+        if (!r.name.toLowerCase().includes(keyword)) return false;
+
+        const rDate = new Date(r.date.replace(/-/g, '/'));
+        if (selectedRange === 'daily') {
+          return r.date === todayStr;
+        } else if (selectedRange === 'weekly') {
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(now.getDate() - 7);
+          return rDate >= oneWeekAgo && rDate <= now;
+        } else if (selectedRange === '3months') {
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setDate(now.getDate() - 90);
+          return rDate >= threeMonthsAgo && rDate <= now;
+        }
+        return true;
+      });
+
+      const displayList = [...filtered].reverse();
+
+      if (displayList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">查無符合條件的個人紀錄</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      displayList.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${item.name}</strong></td>
+          <td>${item.date}</td>
+          <td>${item.time}</td>
+          <td>📍 ${item.location}</td>
+          <td><span class="tag tag-${item.type}">${item.type}</span></td>
+          <td>${item.note || '-'}</td>
+          <td><button class="btn-action btn-delete" onclick="deleteRecord(${item.rowIndex})">🗑️ 刪除</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function deleteRecord(rowIndex) {
+      if (!confirm(`確定要刪除第 ${rowIndex} 列這筆紀錄嗎？這將會同步從 Google 試算表中刪除！`)) return;
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          alert('刪除成功！');
+          loadAllData();
+        } else {
+          alert('刪除失敗：' + (res.message || '未知錯誤'));
+        }
+      })
+      .catch(err => {
+        alert('刪除請求發送失敗，請確認 GAS 部署權限！');
+      });
+    }
+
+    function calculateSalary() {
+      const salaryTbody = document.getElementById('salaryTableBody');
+      salaryTbody.innerHTML = '<tr><td colspan="6" class="loading">暫無資料</td></tr>';
+      document.getElementById('salaryEmptyTip').style.display = 'none';
+      document.getElementById('salaryResultArea').style.display = 'block';
+    }
+
+    function openAddModal() {
+      document.getElementById('modalDate').value = getTodayStr();
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    function submitAddRecord() {
+      const name = document.getElementById('modalName').value.trim();
+      const type = document.getElementById('modalType').value;
+      const date = document.getElementById('modalDate').value;
+      const time = document.getElementById('modalTime').value;
+      const location = document.getElementById('modalLocation').value.trim();
+      const note = document.getElementById('modalNote').value.trim();
+
+      if (!name || !location || !date || !time) {
+        alert('請完整填寫必填欄位！');
+        return;
+      }
+
+      const payload = { name, type, date, time, location, note };
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert('補打卡成功！');
+        closeAddModal();
+        loadAllData();
+      })
+      .catch(err => alert('新增失敗'));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = getTodayStr();
+      document.getElementById('salaryStartDate').value = today;
+      document.getElementById('salaryEndDate').value = today;
+      loadAllData();
+    });
+  </script>
+</body>
+</html>

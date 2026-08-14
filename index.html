@@ -17,7 +17,7 @@
     }
 
     body { font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; margin: 0; }
-    .container { max-width: 900px; margin: 0 auto; background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+    .container { max-width: 980px; margin: 0 auto; background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid var(--border); }
     
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
     h1 { font-size: 1.3rem; color: var(--primary); margin: 0; }
@@ -34,11 +34,14 @@
     /* 控制面板 */
     .filter-panel { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; background: #faf9f7; padding: 12px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
     select, input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; background: #fff; font-size: 0.9rem; }
-    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--primary); }
+    input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus, select:focus { border-color: var(--primary); }
+
+    /* 薪資輸入框樣式 */
+    .input-money { width: 75px; text-align: right; padding: 4px 6px; }
 
     /* 表格 */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+    th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
     th { background-color: #faf9f7; color: var(--primary); font-weight: 600; }
     
     .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 500; }
@@ -85,26 +88,27 @@
       <button class="btn-refresh" onclick="loadAllData()">🔄 刷新資料</button>
     </div>
 
-    <!-- 頁籤導覽 (已移除 當前上班人員 頁籤) -->
+    <!-- 頁籤導覽 -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('statusOnTab')">📱 人員狀態監控</button>
       <button class="tab-btn" onclick="switchTab('historyTab')">📋 個人打卡紀錄</button>
       <button class="tab-btn" onclick="switchTab('salaryTab')">💰 薪資計算</button>
     </div>
 
-    <!-- 分頁一：人員狀態監控（包含上班中狀態顯示） -->
+    <!-- 分頁一：人員狀態監控 -->
     <div id="statusOnTab" class="tab-content active">
       <table>
         <thead>
           <tr>
             <th>姓名</th>
-            <th>開關狀態 / 上班地點</th>
-            <th>選擇模式</th>
+            <th>開關狀態</th>
             <th>最後更新時間</th>
+            <th>上班地點</th>
+            <th>選擇模式</th>
           </tr>
         </thead>
         <tbody id="statusOnTableBody">
-          <tr><td colspan="4" class="loading">載入中...</td></tr>
+          <tr><td colspan="5" class="loading">載入中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -112,7 +116,7 @@
     <!-- 分頁二：個人打卡紀錄 -->
     <div id="historyTab" class="tab-content">
       <div class="filter-panel">
-        <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字（留空顯示全部）..." oninput="renderHistory()">
+        <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字" oninput="renderHistory()">
         <select id="rangeFilter" onchange="renderHistory()">
           <option value="daily">當天 (Daily)</option>
           <option value="weekly">本週 (Weekly)</option>
@@ -139,15 +143,16 @@
       </table>
     </div>
 
-    <!-- 分頁三：薪資計算 -->
+    <!-- 分頁三：薪資計算 (修正版) -->
     <div id="salaryTab" class="tab-content">
       <div class="filter-panel">
-        <input type="text" id="salaryNameInput" placeholder="請輸入姓名或關鍵字">
-        <span style="font-size:0.85rem; color:var(--muted);">開始時間：</span>
+        <!-- 此處 placeholder 已修改 -->
+        <input type="text" id="salaryNameInput" placeholder="🔍 請輸入姓名或關鍵字">
+        <span style="font-size:0.85rem; color:var(--muted);">開始：</span>
         <input type="date" id="salaryStartDate">
-        <span style="font-size:0.85rem; color:var(--muted);">結束時間：</span>
+        <span style="font-size:0.85rem; color:var(--muted);">結束：</span>
         <input type="date" id="salaryEndDate">
-        <button class="btn-action btn-add" onclick="calculateSalary()">🧮 計算薪資</button>
+        <button class="btn-action btn-add" onclick="calculateSalary()">🧮 計算薪資班表</button>
       </div>
 
       <div id="salaryResultArea" style="display: none;">
@@ -156,10 +161,13 @@
             <tr>
               <th>姓名</th>
               <th>日期</th>
-              <th>上下班時間</th>
+              <th>上班時間</th>
+              <th>下班時間</th>
               <th>地點</th>
-              <th>自收現金 ($)</th>
-              <th>時長</th>
+              <th>自收 ($)</th>
+              <th>車資 ($)</th>
+              <th>時數</th>
+              <th>備註</th>
             </tr>
           </thead>
           <tbody id="salaryTableBody"></tbody>
@@ -167,7 +175,7 @@
       </div>
 
       <div id="salaryEmptyTip" class="loading">
-        請輸入姓名與選擇時間範圍後點擊「計算薪資」
+        請輸入姓名與選擇日期範圍後點擊「計算薪資班表」
       </div>
     </div>
   </div>
@@ -270,7 +278,7 @@
     }
 
     function loadAllData() {
-      document.getElementById('statusOnTableBody').innerHTML = '<tr><td colspan="4" class="loading">最新資料載入中...</td></tr>';
+      document.getElementById('statusOnTableBody').innerHTML = '<tr><td colspan="5" class="loading">最新資料載入中...</td></tr>';
       document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" class="loading">最新資料載入中...</td></tr>';
 
       fetch(GAS_URL)
@@ -296,7 +304,6 @@
         .catch(err => alert('資料載入失敗，請確認網路與 GAS 部署！'));
     }
 
-    /* 「人員狀態監控」渲染函數：包含「上班中 + 地點」顯示 */
     function renderStatusOnUsers() {
       const tbody = document.getElementById('statusOnTableBody');
 
@@ -317,7 +324,7 @@
       const userNames = Object.keys(userMap);
 
       if (userNames.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading">目前尚無人員狀態資料</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">目前尚無人員狀態資料</td></tr>';
         return;
       }
 
@@ -327,21 +334,25 @@
         const tr = document.createElement('tr');
         
         let statusBadge = '';
+        let locationDisplay = '-無-';
+
         if (info.lastType === '上班') {
-          // 若打卡為「上班」，顯示上班中與地點
-          const locationText = info.location ? `📍 ${info.location}` : '';
-          statusBadge = `<span class="status-badge working"><span class="status-dot working"></span> 上班中 ${locationText}</span>`;
+          statusBadge = `<span class="status-badge working"><span class="status-dot working"></span> 上班中</span>`;
+          locationDisplay = info.location ? `📍 ${info.location}` : '-無-';
         } else if (info.statusIsOn) {
           statusBadge = `<span class="status-badge"><span class="status-dot"></span> ON</span>`;
+          locationDisplay = '-無-';
         } else {
           statusBadge = `<span class="status-badge off"><span class="status-dot off"></span> OFF</span>`;
+          locationDisplay = '-無-';
         }
 
         tr.innerHTML = `
           <td><strong>${name}</strong></td>
           <td>${statusBadge}</td>
-          <td><span class="mode-badge">${info.statusMode}</span></td>
           <td>${info.lastTime || '-'}</td>
+          <td>${locationDisplay}</td>
+          <td><span class="mode-badge">${info.statusMode}</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -398,6 +409,141 @@
       });
     }
 
+    /* 薪資計算（新增必填姓名判斷） */
+    function calculateSalary() {
+      const nameKeyword = document.getElementById('salaryNameInput').value.trim().toLowerCase();
+      const startDate = document.getElementById('salaryStartDate').value;
+      const endDate = document.getElementById('salaryEndDate').value;
+      const tbody = document.getElementById('salaryTableBody');
+
+      // 1. 強制檢查姓名關鍵字
+      if (!nameKeyword) {
+        alert('請輸入姓名或關鍵字才可進行薪資查詢！');
+        return;
+      }
+
+      // 2. 檢查日期區間
+      if (!startDate || !endDate) {
+        alert('請選擇完整的開始與結束日期！');
+        return;
+      }
+
+      let filtered = rawData.filter(r => {
+        if (!r.name.toLowerCase().includes(nameKeyword)) return false;
+        return r.date >= startDate && r.date <= endDate;
+      });
+
+      const groupMap = {};
+      filtered.forEach(r => {
+        const key = `${r.name}_${r.date}`;
+        if (!groupMap[key]) groupMap[key] = [];
+        groupMap[key].push(r);
+      });
+
+      const shiftList = [];
+
+      Object.keys(groupMap).forEach(key => {
+        const records = groupMap[key];
+        records.sort((a, b) => a.time.localeCompare(b.time));
+
+        let currentOn = null;
+
+        records.forEach(r => {
+          if (r.type === '上班') {
+            currentOn = r;
+          } else if (r.type === '下班') {
+            if (currentOn) {
+              const workHours = calcHours(currentOn.date, currentOn.time, r.date, r.time);
+              const combinedNote = [currentOn.note, r.note].filter(Boolean).join(' | ');
+              const parsedSelfCollect = parseSelfCollect(combinedNote);
+
+              shiftList.push({
+                name: currentOn.name,
+                date: currentOn.date,
+                startTime: currentOn.time,
+                endTime: r.time,
+                location: currentOn.location || r.location || '-無-',
+                selfCollect: parsedSelfCollect,
+                fare: 0,
+                hours: workHours,
+                note: combinedNote || '-'
+              });
+              currentOn = null;
+            } else {
+              shiftList.push({
+                name: r.name,
+                date: r.date,
+                startTime: '未打卡',
+                endTime: r.time,
+                location: r.location || '-無-',
+                selfCollect: parseSelfCollect(r.note),
+                fare: 0,
+                hours: 0,
+                note: r.note || '-'
+              });
+            }
+          }
+        });
+
+        if (currentOn) {
+          shiftList.push({
+            name: currentOn.name,
+            date: currentOn.date,
+            startTime: currentOn.time,
+            endTime: '未下班',
+            location: currentOn.location || '-無-',
+            selfCollect: parseSelfCollect(currentOn.note),
+            fare: 0,
+            hours: 0,
+            note: currentOn.note || '-'
+          });
+        }
+      });
+
+      if (shiftList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">該區間內無符合關鍵字的打卡班表紀錄</td></tr>';
+      } else {
+        tbody.innerHTML = '';
+        shiftList.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${s.name}</strong></td>
+            <td>${s.date}</td>
+            <td>${s.startTime}</td>
+            <td>${s.endTime}</td>
+            <td>📍 ${s.location}</td>
+            <td><input type="number" class="input-money" value="${s.selfCollect}"></td>
+            <td><input type="number" class="input-money" value="${s.fare}"></td>
+            <td><strong>${s.hours}</strong> hr</td>
+            <td>${s.note}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.getElementById('salaryEmptyTip').style.display = 'none';
+      document.getElementById('salaryResultArea').style.display = 'block';
+    }
+
+    function calcHours(d1, t1, d2, t2) {
+      try {
+        const start = new Date(`${d1.replace(/-/g, '/')} ${t1}`);
+        const end = new Date(`${d2.replace(/-/g, '/')} ${t2}`);
+        let diffMs = end - start;
+        if (diffMs < 0) diffMs += 24 * 3600 * 1000;
+        const hours = (diffMs / (1000 * 60 * 60)).toFixed(1);
+        return isNaN(hours) ? 0 : hours;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    function parseSelfCollect(note) {
+      if (!note) return 0;
+      const match = note.match(/(?:自收|現金)\s*[:：]?\s*(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    }
+
     function deleteRecord(rowIndex) {
       if (!confirm(`確定要刪除第 ${rowIndex} 列這筆紀錄嗎？這將會同步從 Google 試算表中刪除！`)) return;
 
@@ -418,13 +564,6 @@
       .catch(err => {
         alert('刪除請求發送失敗，請確認 GAS 部署權限！');
       });
-    }
-
-    function calculateSalary() {
-      const salaryTbody = document.getElementById('salaryTableBody');
-      salaryTbody.innerHTML = '<tr><td colspan="6" class="loading">暫無資料</td></tr>';
-      document.getElementById('salaryEmptyTip').style.display = 'none';
-      document.getElementById('salaryResultArea').style.display = 'block';
     }
 
     function openAddModal() {

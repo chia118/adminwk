@@ -146,7 +146,6 @@
     <!-- 分頁三：薪資計算 (修正版) -->
     <div id="salaryTab" class="tab-content">
       <div class="filter-panel">
-        <!-- 此處 placeholder 已修改 -->
         <input type="text" id="salaryNameInput" placeholder="🔍 請輸入姓名或關鍵字">
         <span style="font-size:0.85rem; color:var(--muted);">開始：</span>
         <input type="date" id="salaryStartDate">
@@ -219,7 +218,7 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-7aoagATYQ4im3FeLQqw5hyuamaCulTKxxB_jZE1bsIIuZrHtLbBMqkdqq4XPtRny/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwzlYP6BXTkf0daiSRP3E6TnsmYyHZzmEHGQliBkII8pu2hA-mYrOIi2wBSZMBPLVKB3g/exec';
 
     let rawData = [];
 
@@ -294,7 +293,7 @@
               type: String(row[4] || '').trim(),
               note: String(row[5] || '').trim(),
               statusIsOn: row[6] !== undefined ? row[6] : true,
-              statusMode: String(row[7] || '🥳 只嗨 (Only Hype)').trim()
+              statusMode: String(row[7] || '🥳 只嗨 (High Only)').trim()
             }));
 
             renderStatusOnUsers();
@@ -316,7 +315,7 @@
           lastType: r.type,
           location: r.location,
           statusIsOn: isOn,
-          statusMode: r.statusMode || '🥳 只嗨 (Only Hype)',
+          statusMode: r.statusMode || '🥳 只嗨 (High Only)',
           lastTime: r.time
         };
       });
@@ -409,20 +408,18 @@
       });
     }
 
-    /* 薪資計算（新增必填姓名判斷） */
+    /* 薪資計算 */
     function calculateSalary() {
       const nameKeyword = document.getElementById('salaryNameInput').value.trim().toLowerCase();
       const startDate = document.getElementById('salaryStartDate').value;
       const endDate = document.getElementById('salaryEndDate').value;
       const tbody = document.getElementById('salaryTableBody');
 
-      // 1. 強制檢查姓名關鍵字
       if (!nameKeyword) {
         alert('請輸入姓名或關鍵字才可進行薪資查詢！');
         return;
       }
 
-      // 2. 檢查日期區間
       if (!startDate || !endDate) {
         alert('請選擇完整的開始與結束日期！');
         return;

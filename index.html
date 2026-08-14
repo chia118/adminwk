@@ -85,7 +85,7 @@
       <button class="tab-btn" onclick="switchTab('salaryTab')">💰 薪資計算</button>
     </div>
 
-    <!-- 分頁一：人員狀態監控（僅顯示 ON 的人員） -->
+    <!-- 分頁一：人員狀態監控 -->
     <div id="statusOnTab" class="tab-content active">
       <div class="table-wrapper">
         <table>
@@ -126,7 +126,7 @@
               <th>時間</th>
               <th>地點</th>
               <th>狀態</th>
-              <th>備註 (下班同步)</th>
+              <th>備註</th> <!-- 已拿掉下班同步字樣 -->
               <th>操作</th>
             </tr>
           </thead>
@@ -160,7 +160,7 @@
               <th>自收 ($)</th>
               <th>車資 ($)</th>
               <th>時數</th>
-              <th>下班備註同步</th>
+              <th>備註</th> <!-- 已改為單純備註 -->
             </tr>
           </thead>
           <tbody id="salaryTableBody"></tbody>
@@ -184,7 +184,7 @@
       <div class="form-group"><label>日期</label><input type="date" id="modalDate"></div>
       <div class="form-group"><label>時間</label><input type="time" id="modalTime" value="09:00"></div>
       <div class="form-group"><label>地點</label><input type="text" id="modalLocation" placeholder="例：OW、八度"></div>
-      <div class="form-group"><label>備註</label><input type="text" id="modalNote" placeholder="選填（下班備註）"></div>
+      <div class="form-group"><label>備註</label><input type="text" id="modalNote" placeholder="選填備註"></div>
       <div class="modal-actions">
         <button class="btn-action" onclick="closeAddModal()">取消</button>
         <button class="btn-action btn-add" onclick="submitAddRecord()">新增打卡</button>
@@ -255,10 +255,9 @@
       const tbody = document.getElementById('statusOnTableBody');
       const userMap = {};
 
-      // 找出每個人的最新紀錄以判斷狀態
       rawData.forEach(r => {
         if (!r.name) return;
-        userMap[r.name] = r; // 因為依序讀取，後面的紀錄較新
+        userMap[r.name] = r;
       });
 
       const activeUsers = Object.values(userMap).filter(info => info.statusIsOn === true);
@@ -312,15 +311,13 @@
       tbody.innerHTML = '';
       displayList.forEach(item => {
         const tr = document.createElement('tr');
-        // 需求：個人打卡紀錄備註同步「下班卡」的備註（若該筆為上班卡，其對應下班備註需從配對抓取，此處直接顯示該行備註若有，或保持空白）
-        const noteDisplay = item.note || '';
         tr.innerHTML = `
           <td><strong>${item.name}</strong></td>
           <td>${item.date}</td>
           <td>${item.time}</td>
           <td>📍 ${item.location}</td>
           <td><span class="tag tag-${item.type}">${item.type}</span></td>
-          <td>${noteDisplay}</td>
+          <td>${item.note || ''}</td>
           <td><button class="btn-action btn-delete" onclick="deleteRecord(${item.rowIndex})">🗑️ 刪除</button></td>
         `;
         tbody.appendChild(tr);
@@ -356,14 +353,13 @@
           else if (r.type === '下班') {
             if (currentOn) {
               const hours = calcHours(currentOn.date, currentOn.time, r.date, r.time);
-              // 需求：薪資計算的備註同步「下班卡」時的那個備註
               const offNote = r.note || '';
               shiftList.push({
                 name: currentOn.name, date: currentOn.date,
                 startTime: currentOn.time, endTime: r.time,
                 location: currentOn.location || r.location || '-',
                 selfCollect: parseSelfCollect(offNote), fare: 0, hours,
-                note: offNote // 同步下班備註
+                note: offNote
               });
               currentOn = null;
             }

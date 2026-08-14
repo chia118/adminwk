@@ -25,8 +25,8 @@
     .btn-refresh:hover { background-color: var(--primary-hover); }
 
     /* 頁籤 */
-    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-    .tab-btn { padding: 10px 16px; background: none; border: none; color: var(--muted); font-size: 0.95rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .tab-btn { padding: 10px 16px; background: none; border: none; color: var(--muted); font-size: 0.95rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
     .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -48,6 +48,8 @@
     .status-badge { display: inline-flex; align-items: center; gap: 6px; color: #3d7a5a; font-weight: 600; }
     .status-dot { width: 8px; height: 8px; background-color: #3d7a5a; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
     
+    .mode-badge { display: inline-block; padding: 4px 10px; background-color: #f2efe9; border: 1px solid var(--border); border-radius: 20px; font-size: 0.82rem; font-weight: 500; color: var(--primary); }
+
     @keyframes pulse {
       0% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(1.2); }
@@ -79,9 +81,10 @@
       <button class="btn-refresh" onclick="loadAllData()">🔄 刷新資料</button>
     </div>
 
-    <!-- 頁籤導覽 -->
+    <!-- 頁籤導覽 (已移除 ON 標籤) -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('activeTab')">🟢 當前上班人員</button>
+      <button class="tab-btn" onclick="switchTab('statusOnTab')">📱 人員狀態監控</button>
       <button class="tab-btn" onclick="switchTab('historyTab')">📋 個人打卡紀錄</button>
       <button class="tab-btn" onclick="switchTab('salaryTab')">💰 薪資計算</button>
     </div>
@@ -104,7 +107,24 @@
       </table>
     </div>
 
-    <!-- 分頁二：個人打卡紀錄 -->
+    <!-- 分頁二：人員狀態監控 -->
+    <div id="statusOnTab" class="tab-content">
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>開關狀態</th>
+            <th>選擇模式</th>
+            <th>最後更新時間</th>
+          </tr>
+        </thead>
+        <tbody id="statusOnTableBody">
+          <tr><td colspan="4" class="loading">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分頁三：個人打卡紀錄 -->
     <div id="historyTab" class="tab-content">
       <div class="filter-panel">
         <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字..." oninput="renderHistory()">
@@ -134,7 +154,7 @@
       </table>
     </div>
 
-    <!-- 分頁三：薪資計算 -->
+    <!-- 分頁四：薪資計算 -->
     <div id="salaryTab" class="tab-content">
       <div class="filter-panel">
         <input type="text" id="salaryNameInput" placeholder="請輸入姓名或關鍵字">
@@ -206,7 +226,6 @@
   </div>
 
   <script>
-    // 已更新為最新的 GAS 部署網址
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-7aoagATYQ4im3FeLQqw5hyuamaCulTKxxB_jZE1bsIIuZrHtLbBMqkdqq4XPtRny/exec';
 
     let rawData = [];
@@ -244,15 +263,17 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       
-      if (tabId === 'activeTab') {
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        document.getElementById('activeTab').classList.add('active');
-      } else if (tabId === 'historyTab') {
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
-        document.getElementById('historyTab').classList.add('active');
-      } else if (tabId === 'salaryTab') {
-        document.querySelectorAll('.tab-btn')[2].classList.add('active');
-        document.getElementById('salaryTab').classList.add('active');
+      const tabMap = {
+        'activeTab': 0,
+        'statusOnTab': 1,
+        'historyTab': 2,
+        'salaryTab': 3
+      };
+
+      const targetIdx = tabMap[tabId];
+      if (targetIdx !== undefined) {
+        document.querySelectorAll('.tab-btn')[targetIdx].classList.add('active');
+        document.getElementById(tabId).classList.add('active');
       }
     }
 
@@ -266,6 +287,7 @@
 
     function loadAllData() {
       document.getElementById('activeTableBody').innerHTML = '<tr><td colspan="5" class="loading">最新資料載入中...</td></tr>';
+      document.getElementById('statusOnTableBody').innerHTML = '<tr><td colspan="4" class="loading">最新資料載入中...</td></tr>';
       
       const keyword = document.getElementById('nameSearchInput').value.trim();
       if (!keyword) {
@@ -283,10 +305,13 @@
               time: formatTime(row[2]),
               location: String(row[3] || '').trim(),
               type: String(row[4] || '').trim(),
-              note: String(row[5] || '').trim()
+              note: String(row[5] || '').trim(),
+              statusIsOn: row[6] !== undefined ? row[6] : true,
+              statusMode: String(row[7] || '🥳 只嗨 (Only Hype)').trim()
             }));
 
             renderActiveUsers();
+            renderStatusOnUsers();
             renderHistory();
           }
         })
@@ -321,6 +346,42 @@
           <td>${info.lastTime}</td>
           <td>📍 ${info.location}</td>
           <td>${info.note || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* 渲染「人員狀態監控」表格 */
+    function renderStatusOnUsers() {
+      const tbody = document.getElementById('statusOnTableBody');
+
+      const localStatusConfig = JSON.parse(localStorage.getItem('user_status_config') || '{}');
+      
+      const userMap = {};
+      rawData.forEach(r => {
+        userMap[r.name] = {
+          statusIsOn: r.statusIsOn !== undefined ? (r.statusIsOn === true || r.statusIsOn === 'TRUE' || r.statusIsOn === 'true') : true,
+          statusMode: r.statusMode || localStatusConfig.value || '🥳 只嗨 (Only Hype)',
+          lastUpdate: `${r.date} ${r.time}`
+        };
+      });
+
+      const onUsers = Object.keys(userMap).filter(name => userMap[name].statusIsOn);
+
+      if (onUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">目前沒有處於開啟狀態的人員</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      onUsers.forEach(name => {
+        const info = userMap[name];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${name}</strong></td>
+          <td><span class="status-badge"><span class="status-dot"></span> ON</span></td>
+          <td><span class="mode-badge">${info.statusMode}</span></td>
+          <td>${info.lastUpdate}</td>
         `;
         tbody.appendChild(tr);
       });

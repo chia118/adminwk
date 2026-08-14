@@ -46,7 +46,11 @@
     .tag-下班 { background-color: #fbeee9; color: #b56247; }
     
     .status-badge { display: inline-flex; align-items: center; gap: 6px; color: #3d7a5a; font-weight: 600; }
+    .status-badge.off { color: #888888; }
+    .status-badge.working { color: #2d6a4f; }
     .status-dot { width: 8px; height: 8px; background-color: #3d7a5a; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    .status-dot.off { background-color: #aaa; animation: none; }
+    .status-dot.working { background-color: #22c55e; }
     
     .mode-badge { display: inline-block; padding: 4px 10px; background-color: #f2efe9; border: 1px solid var(--border); border-radius: 20px; font-size: 0.82rem; font-weight: 500; color: var(--primary); }
 
@@ -81,39 +85,20 @@
       <button class="btn-refresh" onclick="loadAllData()">🔄 刷新資料</button>
     </div>
 
-    <!-- 頁籤導覽 (已移除 ON 標籤) -->
+    <!-- 頁籤導覽 (已移除 當前上班人員 頁籤) -->
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('activeTab')">🟢 當前上班人員</button>
-      <button class="tab-btn" onclick="switchTab('statusOnTab')">📱 人員狀態監控</button>
+      <button class="tab-btn active" onclick="switchTab('statusOnTab')">📱 人員狀態監控</button>
       <button class="tab-btn" onclick="switchTab('historyTab')">📋 個人打卡紀錄</button>
       <button class="tab-btn" onclick="switchTab('salaryTab')">💰 薪資計算</button>
     </div>
 
-    <!-- 分頁一：當前上班人員 -->
-    <div id="activeTab" class="tab-content active">
+    <!-- 分頁一：人員狀態監控（包含上班中狀態顯示） -->
+    <div id="statusOnTab" class="tab-content active">
       <table>
         <thead>
           <tr>
             <th>姓名</th>
-            <th>狀態</th>
-            <th>上班時間</th>
-            <th>上班地點</th>
-            <th>備註</th>
-          </tr>
-        </thead>
-        <tbody id="activeTableBody">
-          <tr><td colspan="5" class="loading">載入中...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 分頁二：人員狀態監控 -->
-    <div id="statusOnTab" class="tab-content">
-      <table>
-        <thead>
-          <tr>
-            <th>姓名</th>
-            <th>開關狀態</th>
+            <th>開關狀態 / 上班地點</th>
             <th>選擇模式</th>
             <th>最後更新時間</th>
           </tr>
@@ -124,10 +109,10 @@
       </table>
     </div>
 
-    <!-- 分頁三：個人打卡紀錄 -->
+    <!-- 分頁二：個人打卡紀錄 -->
     <div id="historyTab" class="tab-content">
       <div class="filter-panel">
-        <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字..." oninput="renderHistory()">
+        <input type="text" id="nameSearchInput" placeholder="🔍 請輸入姓名或關鍵字（留空顯示全部）..." oninput="renderHistory()">
         <select id="rangeFilter" onchange="renderHistory()">
           <option value="daily">當天 (Daily)</option>
           <option value="weekly">本週 (Weekly)</option>
@@ -149,12 +134,12 @@
           </tr>
         </thead>
         <tbody id="historyTableBody">
-          <tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>
+          <tr><td colspan="7" class="loading">資料載入中...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 分頁四：薪資計算 -->
+    <!-- 分頁三：薪資計算 -->
     <div id="salaryTab" class="tab-content">
       <div class="filter-panel">
         <input type="text" id="salaryNameInput" placeholder="請輸入姓名或關鍵字">
@@ -264,10 +249,9 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       
       const tabMap = {
-        'activeTab': 0,
-        'statusOnTab': 1,
-        'historyTab': 2,
-        'salaryTab': 3
+        'statusOnTab': 0,
+        'historyTab': 1,
+        'salaryTab': 2
       };
 
       const targetIdx = tabMap[tabId];
@@ -286,13 +270,8 @@
     }
 
     function loadAllData() {
-      document.getElementById('activeTableBody').innerHTML = '<tr><td colspan="5" class="loading">最新資料載入中...</td></tr>';
       document.getElementById('statusOnTableBody').innerHTML = '<tr><td colspan="4" class="loading">最新資料載入中...</td></tr>';
-      
-      const keyword = document.getElementById('nameSearchInput').value.trim();
-      if (!keyword) {
-        document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>';
-      }
+      document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" class="loading">最新資料載入中...</td></tr>';
 
       fetch(GAS_URL)
         .then(res => res.json())
@@ -310,7 +289,6 @@
               statusMode: String(row[7] || '🥳 只嗨 (Only Hype)').trim()
             }));
 
-            renderActiveUsers();
             renderStatusOnUsers();
             renderHistory();
           }
@@ -318,70 +296,52 @@
         .catch(err => alert('資料載入失敗，請確認網路與 GAS 部署！'));
     }
 
-    function renderActiveUsers() {
-      const tbody = document.getElementById('activeTableBody');
-      const todayStr = getTodayStr();
-
-      const todayRecords = rawData.filter(r => r.date === todayStr);
-
-      const userStatusMap = {};
-      todayRecords.forEach(r => {
-        userStatusMap[r.name] = { lastType: r.type, lastTime: r.time, location: r.location, note: r.note };
-      });
-
-      const activeUsers = Object.keys(userStatusMap).filter(name => userStatusMap[name].lastType === '上班');
-
-      if (activeUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">目前無人上班中</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = '';
-      activeUsers.forEach(name => {
-        const info = userStatusMap[name];
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${name}</strong></td>
-          <td><span class="status-badge"><span class="status-dot"></span> 上班中</span></td>
-          <td>${info.lastTime}</td>
-          <td>📍 ${info.location}</td>
-          <td>${info.note || '-'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    /* 渲染「人員狀態監控」表格 */
+    /* 「人員狀態監控」渲染函數：包含「上班中 + 地點」顯示 */
     function renderStatusOnUsers() {
       const tbody = document.getElementById('statusOnTableBody');
 
-      const localStatusConfig = JSON.parse(localStorage.getItem('user_status_config') || '{}');
-      
       const userMap = {};
       rawData.forEach(r => {
+        if (!r.name) return;
+        const isOn = (r.statusIsOn === true || r.statusIsOn === 'TRUE' || r.statusIsOn === 'true');
+        
         userMap[r.name] = {
-          statusIsOn: r.statusIsOn !== undefined ? (r.statusIsOn === true || r.statusIsOn === 'TRUE' || r.statusIsOn === 'true') : true,
-          statusMode: r.statusMode || localStatusConfig.value || '🥳 只嗨 (Only Hype)',
-          lastUpdate: `${r.date} ${r.time}`
+          lastType: r.type,
+          location: r.location,
+          statusIsOn: isOn,
+          statusMode: r.statusMode || '🥳 只嗨 (Only Hype)',
+          lastTime: r.time
         };
       });
 
-      const onUsers = Object.keys(userMap).filter(name => userMap[name].statusIsOn);
+      const userNames = Object.keys(userMap);
 
-      if (onUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading">目前沒有處於開啟狀態的人員</td></tr>';
+      if (userNames.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">目前尚無人員狀態資料</td></tr>';
         return;
       }
 
       tbody.innerHTML = '';
-      onUsers.forEach(name => {
+      userNames.forEach(name => {
         const info = userMap[name];
         const tr = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (info.lastType === '上班') {
+          // 若打卡為「上班」，顯示上班中與地點
+          const locationText = info.location ? `📍 ${info.location}` : '';
+          statusBadge = `<span class="status-badge working"><span class="status-dot working"></span> 上班中 ${locationText}</span>`;
+        } else if (info.statusIsOn) {
+          statusBadge = `<span class="status-badge"><span class="status-dot"></span> ON</span>`;
+        } else {
+          statusBadge = `<span class="status-badge off"><span class="status-dot off"></span> OFF</span>`;
+        }
+
         tr.innerHTML = `
           <td><strong>${name}</strong></td>
-          <td><span class="status-badge"><span class="status-dot"></span> ON</span></td>
+          <td>${statusBadge}</td>
           <td><span class="mode-badge">${info.statusMode}</span></td>
-          <td>${info.lastUpdate}</td>
+          <td>${info.lastTime || '-'}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -392,16 +352,13 @@
       const keyword = document.getElementById('nameSearchInput').value.trim().toLowerCase();
       const selectedRange = document.getElementById('rangeFilter').value;
 
-      if (keyword === '') {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">請輸入姓名或關鍵字以查詢打卡紀錄</td></tr>';
-        return;
-      }
-
       const now = new Date();
       const todayStr = getTodayStr();
 
       let filtered = rawData.filter(r => {
-        if (!r.name.toLowerCase().includes(keyword)) return false;
+        if (keyword !== '' && !r.name.toLowerCase().includes(keyword)) {
+          return false;
+        }
 
         const rDate = new Date(r.date.replace(/-/g, '/'));
         if (selectedRange === 'daily') {
@@ -421,7 +378,7 @@
       const displayList = [...filtered].reverse();
 
       if (displayList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">查無符合條件的個人紀錄</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">查無符合條件的打卡紀錄</td></tr>';
         return;
       }
 

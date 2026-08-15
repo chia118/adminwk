@@ -102,6 +102,40 @@
       display: block;
     }
 
+    /* 監控人員分頁內部的子分頁樣式 */
+    .sub-nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .sub-tab-btn {
+      padding: 6px 14px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+    }
+
+    .sub-tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .sub-tab-content {
+      display: none;
+    }
+
+    .sub-tab-content.active {
+      display: block;
+    }
+
     .filter-panel {
       display: flex;
       gap: 10px;
@@ -134,26 +168,11 @@
       padding: 4px 6px;
     }
 
-    .salary-date {
-      width: 135px;
-    }
-
-    .salary-time {
-      width: 105px;
-    }
-
-    .salary-location {
-      width: 150px;
-    }
-
     .table-wrapper {
       width: 100%;
       overflow-x: auto;
     }
 
-    /* 薪資表欄寬：縮小地點、增加備註空間 */
-
-    /* 薪資表：維持上一版字型，只將輸入框內數字稍微放大 */
     .salary-table input,
     .salary-table .salary-date,
     .salary-table .salary-time,
@@ -162,8 +181,6 @@
       font-size: calc(0.82rem + 1px);
     }
 
-
-    /* 薪資計算「開始／結束」日期數字，與下方薪資表日期／時間使用相同字型 */
     #salaryStartDate,
     #salaryEndDate,
     .salary-table .salary-date,
@@ -171,14 +188,11 @@
       font-family: inherit !important;
     }
 
-
-    /* 時薪、車資數字靠左 */
     .salary-table .salary-self,
     .salary-table .salary-fare {
       text-align: left !important;
     }
 
-    /* 薪資表：使用實際欄寬，避免日期／時間／地點互相遮擋 */
     .salary-table {
       width: 100%;
       min-width: 940px;
@@ -219,10 +233,6 @@
       font-size: calc(0.82rem + 2px);
     }
 
-    .salary-table .salary-date {
-      font-family: inherit;
-    }
-
     .salary-table .salary-location {
       width: 105px;
       min-width: 0;
@@ -243,7 +253,6 @@
       box-sizing: border-box;
     }
 
-    /* 薪資結果區太窄時橫向捲動，不讓欄位互相覆蓋 */
     #salaryResultArea {
       overflow-x: auto;
     }
@@ -317,15 +326,20 @@
       }
     }
 
-    .mode-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      background-color: #f2efe9;
+    .mode-select {
+      padding: 6px 10px;
       border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 0.82rem;
-      font-weight: 500;
+      border-radius: 6px;
+      background: #fff;
       color: var(--primary);
+      font-weight: 500;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .mode-select:hover {
+      border-color: var(--primary);
     }
 
     .btn-action {
@@ -337,7 +351,6 @@
       font-weight: 500;
     }
 
-    /* 刪除按鈕：與編輯按鈕相同尺寸、白底框線，X 使用紅色 */
     .btn-delete {
       background-color: #ffffff;
       color: var(--primary);
@@ -435,7 +448,27 @@
       gap: 8px;
       margin-top: 16px;
     }
-  </style>
+  
+    /* 薪資表日期與上下班時間可直接修改，修改後自動重算時數 */
+    .salary-date,
+    .salary-time {
+      cursor: pointer;
+    }
+    .salary-row-hours {
+      font-weight: 700;
+    }
+
+  
+    .status-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px 8px 10px;
+      margin-top: 10px;
+      border-bottom: 1px solid #e5e0da;
+    }
+    .status-online-title { color: #3d7a5a; }
+    .status-offline-title { color: #dc2626; margin-top: 24px; }
+    </style>
 </head>
 
 <body>
@@ -462,24 +495,102 @@
     </div>
 
     <div id="statusOnTab" class="tab-content active">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>姓名</th>
-              <th>狀態</th>
-              <th>更新時間</th>
-              <th>上班地點</th>
-              <th>選擇模式</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody id="statusOnTableBody">
-            <tr>
-              <td colspan="6" class="loading">載入中...</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- 監控人員分頁內部的子分頁按鈕 (在線人員在前，上班中在後) -->
+      <div class="sub-nav-tabs">
+        <button class="sub-tab-btn active" onclick="switchSubTab('onlineSubTab', this)">目前狀態</button>
+        <button class="sub-tab-btn" onclick="switchSubTab('workingSubTab', this)">目前上班中</button>
+      </div>
+
+      <!-- 目前狀態子分頁 -->
+      <div id="onlineSubTab" class="sub-tab-content active">
+
+        <div class="status-section-title status-online-title">🟢 在線人員</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>狀態</th>
+                <th>更新時間</th>
+                <th>選擇模式</th>
+                <th>狀態提交備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="onlineTableBody">
+              <tr>
+                <td colspan="6" class="loading">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="status-section-title status-offline-title">🔴 離線人員</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>狀態</th>
+                <th>更新時間</th>
+                <th>選擇模式</th>
+                <th>狀態提交備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="offlineTableBody">
+              <tr>
+                <td colspan="6" class="loading">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- 前台送出 OFF：只顯示最近 1 小時 -->
+      <div id="offRecentSubTab" class="sub-tab-content" style="display:none;">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>狀態</th>
+                <th>送出時間</th>
+                <th>選擇模式</th>
+                <th>備註</th>
+              </tr>
+            </thead>
+            <tbody id="offRecentTableBody">
+              <tr>
+                <td colspan="5" class="loading">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 目前上班中子分頁 -->
+      <div id="workingSubTab" class="sub-tab-content">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>狀態</th>
+                <th>更新時間</th>
+                <th>上班地點</th>
+                <th>人員備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="workingTableBody">
+              <tr>
+                <td colspan="6" class="loading">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -514,7 +625,7 @@
               <th>時間</th>
               <th>地點</th>
               <th>狀態</th>
-              <th>備註</th>
+              <th>上下班備註</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -578,12 +689,12 @@
       <div id="salarySummary" style="display:none; margin-top:12px; padding:12px 16px; background:#faf7f3; border:1px solid var(--border); border-radius:8px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
         <div><strong>總時數：</strong><span id="totalHours">0.0</span> hr</div>
         <div><strong>總車資：</strong><span id="totalFare">0</span></div>
-        <div><strong>總金額：</strong>$<span id="totalAmount">0</span></div>
         <div style="display:flex; align-items:center; gap:6px;">
           <strong>房租：</strong>
           <input id="rentAmount" type="number" min="0" step="1" value="0"
                  style="width:90px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; box-sizing:border-box;">
         </div>
+        <div><strong>總金額：</strong>$<span id="totalAmount">0</span></div>
       </div>
 
       <div id="salaryEmptyTip" class="loading">
@@ -591,6 +702,20 @@
       </div>
     </div>
 
+  </div>
+
+  <div id="noteEditModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">編輯上下班備註</div>
+      <div class="form-group">
+        <label>備註</label>
+        <input type="text" id="editNoteInput" placeholder="留白即可清除備註">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-action" id="cancelEditNoteBtn">取消</button>
+        <button type="button" class="btn-action btn-add" id="saveEditNoteBtn">儲存</button>
+      </div>
+    </div>
   </div>
 
   <div id="addModal" class="modal">
@@ -633,8 +758,7 @@
   </div>
 
   <script>
-    // 已更新為最新的 GAS 部署網址
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1jDseSY_0Y-50LxbnzFZMdwh3UVAiy1X-qkTZ6AuZZE9XypR2YHIZ2UAsJsL9ii9ULQ/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec';
     let rawData = [];
 
     function formatDate(rawVal) {
@@ -684,6 +808,14 @@
       document.getElementById(tabId).classList.add('active');
     }
 
+    function switchSubTab(subTabId, btn) {
+      document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+
+      btn.classList.add('active');
+      document.getElementById(subTabId).classList.add('active');
+    }
+
     function getTodayStr() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -722,78 +854,397 @@
         });
     }
 
+
+    function parseRecordDateTime(record) {
+      const dateStr = String(record.date || '').trim();
+      const timeStr = String(record.time || '').trim();
+      if (!dateStr || !timeStr) return null;
+
+      // 支援 YYYY-MM-DD、YYYY/MM/DD 與 Date 物件字串。
+      const normalizedDate = dateStr.replace(/\//g, '-');
+      const t = timeStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+
+      if (!t) return null;
+
+      let year, month, day;
+
+      let m = normalizedDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (m) {
+        year = Number(m[1]);
+        month = Number(m[2]);
+        day = Number(m[3]);
+      } else {
+        m = normalizedDate.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+        if (m) {
+          month = Number(m[1]);
+          day = Number(m[2]);
+          year = Number(m[3]);
+        } else {
+          return null;
+        }
+      }
+
+      const d = new Date(
+        year,
+        month - 1,
+        day,
+        Number(t[1]),
+        Number(t[2]),
+        Number(t[3] || 0)
+      );
+
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function renderRecentOffUsers() {
+      const tbody = document.getElementById('offRecentTableBody');
+      if (!tbody) return;
+
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      const recentOff = rawData
+        .filter(r => {
+          if (!r.name || r.name === '姓名' || r.type !== '狀態') return false;
+
+          const isOff =
+            r.statusIsOn === false ||
+            String(r.statusIsOn).toLowerCase() === 'false' ||
+            String(r.statusMode || '').trim() === 'OFF';
+
+          if (!isOff) return false;
+
+          const dt = parseRecordDateTime(r);
+          return dt && dt >= oneHourAgo && dt <= now;
+        })
+        .sort((a, b) => {
+          const da = parseRecordDateTime(a);
+          const db = parseRecordDateTime(b);
+          return db - da;
+        });
+
+      if (recentOff.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">最近 1 小時內沒有前台 OFF 紀錄</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = recentOff.map(info => {
+        const note = info.note
+          ? String(info.note).replace(/^\u200B/, '').replace(/^\[補\]\s*/, '')
+          : '-';
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(info.name)}</strong></td>
+            <td>
+              <span class="status-badge" style="color:#64748b;">
+                🔴 離線
+              </span>
+            </td>
+            <td>${escapeHtml(info.time || '-')}</td>
+            <td>OFF</td>
+            <td>${escapeHtml(note)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+
+
+    // 目前狀態表格是動態產生的，因此使用事件委派，
+    // 確保每次刷新後新產生的 ✏️ 都能正常點擊。
+    document.addEventListener('click', function(event) {
+      const btn = event.target.closest('.status-note-edit-btn');
+      if (!btn) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const rowIndex = Number(btn.getAttribute('data-row-index'));
+      const name = btn.getAttribute('data-name') || '';
+      const currentNote = btn.getAttribute('data-note') || '';
+
+      if (!Number.isInteger(rowIndex) || rowIndex < 2) {
+        alert('無法取得這筆狀態資料的列號。');
+        return;
+      }
+
+      editStatusSubmitNote(rowIndex, name, currentNote);
+    });
+
+    function editStatusSubmitNote(rowIndex, name, currentNote) {
+      const newNote = prompt(
+        '請輸入狀態提交備註（留白即可清除）',
+        currentNote || ''
+      );
+
+      if (newNote === null) return;
+
+      const payload = {
+        action: 'updateStatusNote',
+        name: String(name || '').trim(),
+        rowIndex: Number(rowIndex),
+        note: String(newNote).trim()
+      };
+
+      fetch('https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.text())
+      .then(raw => {
+        let result;
+        try {
+          result = JSON.parse(raw);
+        } catch (e) {
+          throw new Error('GAS 回傳的資料格式錯誤');
+        }
+
+        if (result && result.result === 'success') {
+          alert('✅ 狀態提交備註已更新');
+          loadAllData();
+          return;
+        }
+
+        throw new Error(
+          (result && result.message) ||
+          'GAS 尚未支援 updateStatusNote，請更新 Apps Script'
+        );
+      })
+      .catch(error => {
+        console.error('updateStatusNote error:', error);
+        alert('狀態提交備註更新失敗：' + error.message);
+      });
+    }
+
+
     function renderStatusOnUsers() {
-      const tbody = document.getElementById('statusOnTableBody');
+      const onlineTbody = document.getElementById('onlineTableBody');
+      const offlineTbody = document.getElementById('offlineTableBody');
+      const workingTbody = document.getElementById('workingTableBody');
+
       const userMap = {};
 
       rawData.forEach(r => {
         if (!r.name || r.name === '姓名') return;
-        userMap[r.name] = r;
+        const key = String(r.name).trim().toLowerCase();
+
+        if (!userMap[key] || Number(r.rowIndex) > Number(userMap[key].rowIndex)) {
+          userMap[key] = r;
+        }
       });
 
-      const activeUsers = Object.values(userMap).filter(info => {
-        // 只有「OFF」才不顯示。
-        // ON、待確認、上班中都要顯示。
+      const latestUsers = Object.values(userMap);
+
+      // 在線：目前 ON 的人員。
+      const onlineUsers = latestUsers.filter(info => {
         if (info.type === '上班') return true;
-
-        // 狀態紀錄：statusIsOn = true 代表 ON / 待確認，兩者都顯示
         if (info.type === '狀態') return info.statusIsOn === true;
-
-        // 其他紀錄若本身是 ON，也保留顯示
-        if (info.statusIsOn === true) return true;
-
-        return false;
+        return info.statusIsOn === true;
       });
 
-      if (activeUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">尚無資料</td></tr>';
-        return;
-      }
+      // 離線：前台送出的 OFF，只保留最近 1 小時。
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const recentOffMap = {};
 
-      tbody.innerHTML = '';
+      rawData.forEach(info => {
+        if (!info.name || info.name === '姓名' || info.type !== '狀態') return;
 
-      activeUsers.forEach(info => {
-        const tr = document.createElement('tr');
-        const isBook = info.type === '上班';
-        let statusBadge;
+        const isOff =
+          info.statusIsOn === false ||
+          String(info.statusIsOn).toLowerCase() === 'false' ||
+          String(info.statusMode || '').trim() === 'OFF';
 
-        if (isBook) {
-          statusBadge = `
-            <span class="status-badge" style="color:#3d7a5a;">
-              <span class="status-dot" style="background:#22c55e;"></span>
-              上班中
-            </span>
-          `;
-        } else {
-          statusBadge = `
-            <span class="status-badge" style="color:#2563eb;">
-              <span class="status-dot" style="background:#2563eb;"></span>
-              在線 ON
-            </span>
-          `;
+        if (!isOff) return;
+
+        const dt = parseRecordDateTime(info);
+        if (!dt || dt < oneHourAgo || dt > now) return;
+
+        const key = String(info.name).trim().toLowerCase();
+        if (!recentOffMap[key] ||
+            Number(info.rowIndex) > Number(recentOffMap[key].rowIndex)) {
+          recentOffMap[key] = info;
+        }
+      });
+
+      const onlineNameSet = new Set(
+        onlineUsers.map(info => String(info.name).trim().toLowerCase())
+      );
+
+      const offlineUsers = Object.values(recentOffMap).filter(info =>
+        !onlineNameSet.has(String(info.name).trim().toLowerCase())
+      );
+
+      function renderRows(tbody, users, emptyText, offline) {
+        if (!tbody) return;
+
+        if (!users.length) {
+          tbody.innerHTML =
+            `<tr><td colspan="6" class="loading">${emptyText}</td></tr>`;
+          return;
         }
 
-        const locationDisplay = isBook && info.location
-          ? `📍 ${info.location}`
-          : '-';
+        tbody.innerHTML = '';
 
-        tr.innerHTML = `
-          <td><strong>${info.name}</strong></td>
-          <td>${statusBadge}</td>
-          <td>${info.time || '-'}</td>
-          <td>${locationDisplay}</td>
-          <td>
-            ${isBook ? '-' : `<span class="mode-badge">${info.statusMode}</span>`}
-          </td>
-          <td>
-            <button class="btn-action btn-delete"
-              onclick="deleteStatusRecord(${info.rowIndex}, '${String(info.name).replace(/'/g, "\\'")}')">
-              <span class="delete-x">✕</span>刪除
-            </button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+        users
+          .sort((a, b) => Number(b.rowIndex) - Number(a.rowIndex))
+          .forEach(info => {
+            const tr = document.createElement('tr');
+
+            const isOff = offline;
+
+            const statusBadge = isOff
+              ? `<span class="status-badge" style="color:#dc2626;">🔴 離線</span>`
+              : `<span class="status-badge" style="color:#3d7a5a;">🟢 在線</span>`;
+
+            const noteDisplay =
+              (info.statusMode === '🌙 剛下班待確認' ||
+               info.statusMode === '剛下班待確認' ||
+               info.statusMode === '⏳ 待確認 (Pending)')
+                ? '-'
+                : (info.note
+                    ? String(info.note)
+                        .replace(/^\u200B/, '')
+                        .replace(/^\[補\]\s*/, '')
+                    : '-');
+
+            let modeHtml;
+
+            if (isOff) {
+              modeHtml = '<span style="color:#7d6f63;font-weight:600;">OFF</span>';
+            } else {
+              const availableModes = [
+                '🥳 只嗨 (High Only)',
+                '🍷 只酒 (Drinks Only)',
+                '🎉 都可以 (Both)',
+                '📅 已預約',
+                '🌙 剛下班待確認'
+              ];
+
+              let currentMode = String(info.statusMode || '').trim();
+
+              if (currentMode === 'BOOK' || currentMode === '已預約') {
+                currentMode = '📅 已預約';
+              } else if (currentMode === '只嗨 (High Only)') {
+                currentMode = '🥳 只嗨 (High Only)';
+              } else if (currentMode === '只酒 (Drinks Only)') {
+                currentMode = '🍷 只酒 (Drinks Only)';
+              } else if (currentMode === '都可以 (Both)') {
+                currentMode = '🎉 都可以 (Both)';
+              } else if (
+                currentMode === '⏳ 待確認 (Pending)' ||
+                currentMode === '待確認' ||
+                currentMode === 'Pending'
+              ) {
+                currentMode = '🌙 剛下班待確認';
+              }
+
+              modeHtml = `
+                <select class="mode-select"
+                  onchange="updateStatusModeFromDropdown(this, ${info.rowIndex})">
+                  ${availableModes.map(m =>
+                    `<option value="${m}" ${m === currentMode ? 'selected' : ''}>${m}</option>`
+                  ).join('')}
+                </select>`;
+            }
+
+            const safeName = String(info.name).replace(/'/g, "\\'");
+
+            tr.innerHTML = `
+              <td><strong>${escapeHtml(info.name)}</strong></td>
+              <td>${statusBadge}</td>
+              <td>${escapeHtml(info.time || '-')}</td>
+              <td>${modeHtml}</td>
+              
+              <td>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span>${escapeHtml(noteDisplay)}</span>
+                  <button type="button" class="btn-action btn-edit status-note-edit-btn"
+                    title="編輯狀態提交備註"
+                    data-row-index="${Number(info.rowIndex)}"
+                    data-name="${escapeHtml(String(info.name || ''))}"
+                    data-note="${escapeHtml(String(info.note || ''))}"
+                    style="padding:4px 6px;">✏️</button>
+                </div>
+              </td>
+              <td>
+                <button type="button" class="btn-action btn-delete"
+                  onclick="deleteStatusRecord(${info.rowIndex}, '${safeName}')">
+                  刪除
+                </button>
+              </td>
+            `;
+
+            tbody.appendChild(tr);
+          });
+      }
+
+      renderRows(onlineTbody, onlineUsers, '目前沒有在線人員', false);
+      renderRows(offlineTbody, offlineUsers, '最近 1 小時內沒有離線人員', true);
+
+      // 「目前上班中」子分頁保留原本功能。
+      const workingUsers = latestUsers.filter(info => info.type === '上班');
+
+      if (workingTbody) {
+        if (!workingUsers.length) {
+          workingTbody.innerHTML =
+            '<tr><td colspan="6" class="loading">目前無上班中人員</td></tr>';
+        } else {
+          workingTbody.innerHTML = '';
+
+          workingUsers.forEach(info => {
+            const tr = document.createElement('tr');
+            const workNote = info.note
+              ? String(info.note)
+                  .replace(/^\u200B/, '')
+                  .replace(/^\[補\]\s*/, '')
+              : '';
+
+            tr.innerHTML = `
+              <td><strong>${escapeHtml(info.name)}</strong></td>
+              <td>
+                <span class="status-badge" style="color:#3d7a5a;">
+                  上班中
+                </span>
+              </td>
+              <td>${escapeHtml(info.time || '-')}</td>
+              <td>上班中Working</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span>${escapeHtml(workNote || '-')}</span>
+                  <button class="btn-action btn-edit"
+                    title="編輯備註"
+                    onclick="editNote(${info.rowIndex}, '${String(workNote).replace(/'/g, "\\'")}')"
+                    style="padding:4px 6px;">✏️</button>
+                </div>
+              </td>
+              <td>
+                <button class="btn-action btn-delete"
+                  onclick="deleteStatusRecord(${info.rowIndex}, '${String(info.name).replace(/'/g, "\\'")}')">
+                  刪除
+                </button>
+              </td>
+            `;
+
+            workingTbody.appendChild(tr);
+          });
+        }
+      }
+
+      renderRecentOffUsers();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     function renderHistory() {
@@ -838,13 +1289,15 @@
         const isManual = item.isManual === true;
         const statusDisplay = item.type;
         const tagClass = `tag-${item.type}`;
-        // 隱藏管理者標記，不在備註欄顯示 [補] 或零寬標記
         const displayNote = String(item.note || '')
           .replace(/^\u200B/, '')
           .replace(/^\[補\]\s*/, '');
 
-        let actionHtml = `<button class="btn-action btn-edit" onclick="editNote(${item.rowIndex}, ${JSON.stringify(displayNote)})">✏️ 編輯</button>
-          <button class="btn-action btn-delete" onclick="deleteRecord(${item.rowIndex})"><span class="delete-x">✕</span>刪除</button>`;
+        let actionHtml = `<button type="button" class="btn-action btn-edit history-edit-btn"
+            data-row-index="${Number(item.rowIndex)}"
+            data-note="${escapeHtml(displayNote)}">✏️ 編輯</button>
+          <button type="button" class="btn-action btn-delete history-delete-btn"
+            data-row-index="${Number(item.rowIndex)}"><span class="delete-x">✕</span>刪除</button>`;
         if (isManual) {
           actionHtml += ` <span style="display:inline-block; margin-left:12px; font-size:0.75rem; background:#fef3c7; color:#92400e; padding:3px 6px; border-radius:4px; font-weight:600;" title="管理者補打卡">⚡ 補</span>`;
         }
@@ -913,7 +1366,6 @@
           } else if (r.type === '下班' && currentOn) {
             const hours = calcHours(currentOn.date, currentOn.time, r.date, r.time);
 
-            // 備註同步：上班／下班打卡只要有備註，就顯示在薪資表「備註」欄。
             const onNote = cleanSalaryNote(currentOn.note);
             const offNote = cleanSalaryNote(r.note);
             const noteList = [];
@@ -924,7 +1376,6 @@
             const location = String(currentOn.location || r.location || '').trim();
             const locationKey = location.toLowerCase();
 
-            // sky / 9號 / 9p 顯示 100；其他地點顯示 110。
             const selfCollect =
               locationKey === 'sky' ||
               locationKey === '9號' ||
@@ -972,7 +1423,7 @@
               </td>
               <td><input type="number" class="input-money salary-self" value="${s.selfCollect}"></td>
               <td><input type="number" class="input-money salary-fare" value="${s.fare}"></td>
-              <td><strong>${escapeSalaryHtml(s.hours)}</strong> hr</td>
+              <td><strong class="salary-row-hours">${escapeSalaryHtml(s.hours)}</strong> hr</td>
               <td>${escapeSalaryHtml(s.note || '')}</td>
             </tr>
           `;
@@ -994,7 +1445,7 @@
       rows.forEach(row => {
         const selfInput = row.querySelector('.salary-self');
         const fareInput = row.querySelector('.salary-fare');
-        const hoursEl = row.querySelector('td:nth-child(8) strong');
+        const hoursEl = row.querySelector('.salary-row-hours');
 
         const self = selfInput ? parseFloat(selfInput.value) : 0;
         const fare = fareInput ? parseFloat(fareInput.value) : 0;
@@ -1015,7 +1466,6 @@
       document.getElementById('salarySummary').style.display = rows.length ? 'flex' : 'none';
     }
 
-    
     document.addEventListener('input', function(e) {
       if (
         e.target.classList.contains('salary-self') ||
@@ -1023,6 +1473,38 @@
         e.target.id === 'rentAmount'
       ) {
         updateSalarySummary();
+      }
+    });
+
+    function recalculateSalaryRow(row) {
+      if (!row) return;
+
+      const dateInput = row.querySelector('.salary-date');
+      const timeInputs = row.querySelectorAll('.salary-time');
+      const hoursEl = row.querySelector('.salary-row-hours');
+
+      if (!dateInput || timeInputs.length < 2 || !hoursEl) return;
+
+      const date = dateInput.value;
+      const startTime = timeInputs[0].value;
+      const endTime = timeInputs[1].value;
+
+      if (!date || !startTime || !endTime) {
+        hoursEl.textContent = '0.0';
+        updateSalarySummary();
+        return;
+      }
+
+      hoursEl.textContent = calcHours(date, startTime, date, endTime);
+      updateSalarySummary();
+    }
+
+    document.addEventListener('change', function(e) {
+      if (
+        e.target.classList.contains('salary-date') ||
+        e.target.classList.contains('salary-time')
+      ) {
+        recalculateSalaryRow(e.target.closest('tr'));
       }
     });
 
@@ -1042,21 +1524,56 @@
       }
     }
 
-    function parseSelfCollect(note) {
-      if (!note) return 0;
-      const match = note.match(/(?:自收|現金)\s*[:：]?\s*(\d+)/);
-      return match ? parseInt(match[1], 10) : 0;
-    }
+    let editingNoteRowIndex = null;
 
     function editNote(rowIndex, currentNote) {
-      const newNote = prompt('請輸入新的備註（留白即可清除）', currentNote || '');
-      if (newNote === null) return;
+      const numericRowIndex = Number(rowIndex);
 
-      // 若原本是管理者補打卡，保留隱藏標記，讓「⚡ 補」不會因清空備註而消失
-      const original = rawData.find(r => r.rowIndex === rowIndex);
+      if (!Number.isInteger(numericRowIndex) || numericRowIndex < 2) {
+        alert('無法取得這筆打卡紀錄的資料列，請重新整理後再試一次。');
+        return;
+      }
+
+      const modal = document.getElementById('noteEditModal');
+      const input = document.getElementById('editNoteInput');
+
+      if (!modal || !input) {
+        alert('編輯視窗載入失敗，請重新整理頁面。');
+        return;
+      }
+
+      editingNoteRowIndex = numericRowIndex;
+      input.value = String(currentNote || '');
+      modal.style.display = 'flex';
+
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 50);
+    }
+
+    function closeEditNoteModal() {
+      editingNoteRowIndex = null;
+      const modal = document.getElementById('noteEditModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function saveEditedNote() {
+      if (editingNoteRowIndex === null) return;
+
+      const rowIndex = editingNoteRowIndex;
+      const input = document.getElementById('editNoteInput');
+      const saveBtn = document.getElementById('saveEditNoteBtn');
+      const newNote = input ? input.value.trim() : '';
+
+      if (!saveBtn) return;
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = '儲存中...';
+
+      const original = rawData.find(r => Number(r.rowIndex) === rowIndex);
       const wasManual = original && original.isManual === true;
-      const cleanNote = newNote.trim();
-      const noteToSave = wasManual ? `\u200B${cleanNote}` : cleanNote;
+      const noteToSave = wasManual ? `\u200B${newNote}` : newNote;
 
       fetch(GAS_URL, {
         method: 'POST',
@@ -1070,14 +1587,87 @@
       .then(res => res.json())
       .then(res => {
         if (res.result === 'success') {
+          closeEditNoteModal();
           loadAllData();
         } else {
-          alert('備註更新失敗：' + (res.message || '未知錯誤'));
+          throw new Error(res.message || '未知錯誤');
         }
       })
       .catch(err => {
         console.error(err);
-        alert('備註更新失敗，請確認網路連線。');
+        alert('備註更新失敗：' + (err.message || '請確認網路連線或 GAS。'));
+      })
+      .finally(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerText = '儲存';
+      });
+    }
+
+    // 個人打卡紀錄使用事件委派，避免 inline onclick 因備註特殊字元而失效。
+    document.getElementById('historyTableBody').addEventListener('click', function(e) {
+      const editBtn = e.target.closest('.history-edit-btn');
+      if (editBtn) {
+        editNote(
+          Number(editBtn.dataset.rowIndex),
+          editBtn.dataset.note || ''
+        );
+        return;
+      }
+
+      const deleteBtn = e.target.closest('.history-delete-btn');
+      if (deleteBtn) {
+        deleteRecord(Number(deleteBtn.dataset.rowIndex));
+      }
+    });
+
+    document.getElementById('workingTableBody').addEventListener('click', function(e) {
+      const editBtn = e.target.closest('.working-edit-btn');
+      if (!editBtn) return;
+      editNote(Number(editBtn.dataset.rowIndex), editBtn.dataset.note || '');
+    });
+
+    document.getElementById('cancelEditNoteBtn').addEventListener('click', closeEditNoteModal);
+    document.getElementById('saveEditNoteBtn').addEventListener('click', saveEditedNote);
+
+    document.getElementById('noteEditModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEditNoteModal();
+    });
+
+    document.getElementById('editNoteInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveEditedNote();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeEditNoteModal();
+      }
+    });
+
+    function updateStatusModeFromDropdown(selectEl, rowIndex) {
+      const newMode = selectEl.value;
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateStatusMode',
+          rowIndex: rowIndex,
+          statusMode: newMode
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          loadAllData();
+        } else {
+          alert('選擇模式更新失敗：' + (res.message || '未知錯誤'));
+          loadAllData();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('選擇模式更新失敗，請確認網路連線。');
+        loadAllData();
       });
     }
 
@@ -1129,7 +1719,6 @@
     function submitAddRecord() {
       const typeVal = document.getElementById('modalType').value;
       const userNote = document.getElementById('modalNote').value.trim();
-      // 管理者補打卡不在備註顯示 [補]；使用零寬標記保留「⚡ 補」辨識
       const finalNote = `\u200B${userNote}`;
 
       const payload = {

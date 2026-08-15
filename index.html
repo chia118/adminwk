@@ -128,6 +128,33 @@
       border-bottom-color: var(--primary);
     }
 
+    /* 子分頁新消息星星提示 */
+    .new-message-star {
+      display: none;
+      margin-left: 6px;
+      vertical-align: middle;
+      color: #f5b301;
+      font-size: 15px;
+      line-height: 1;
+      text-shadow: 0 0 5px rgba(245,179,1,0.45);
+      animation: newMessageStarPulse 1.4s infinite;
+    }
+
+    .new-message-star.show {
+      display: inline-block;
+    }
+
+    @keyframes newMessageStarPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: .55;
+        transform: scale(1.18);
+      }
+    }
+
     .sub-tab-content {
       display: none;
     }
@@ -497,8 +524,12 @@
     <div id="statusOnTab" class="tab-content active">
       <!-- 監控人員分頁內部的子分頁按鈕 (在線人員在前，上班中在後) -->
       <div class="sub-nav-tabs">
-        <button class="sub-tab-btn active" onclick="switchSubTab('onlineSubTab', this)">目前狀態</button>
-        <button class="sub-tab-btn" onclick="switchSubTab('workingSubTab', this)">目前上班中</button>
+        <button class="sub-tab-btn active" onclick="switchSubTab('onlineSubTab', this)">
+          目前狀態<span class="new-message-star" id="onlineNewDot" aria-label="有新消息">★</span>
+        </button>
+        <button class="sub-tab-btn" onclick="switchSubTab('workingSubTab', this)">
+          目前上班中 (<span id="workingCount">0</span>)<span class="new-message-star" id="workingNewDot" aria-label="有新消息">★</span>
+        </button>
       </div>
 
       <!-- 目前狀態子分頁 -->
@@ -814,11 +845,116 @@
 
       btn.classList.add('active');
       document.getElementById(subTabId).classList.add('active');
+
+      // 使用者點進該分頁後，視為已讀，清除該分頁紅點。
+      if (subTabId === 'onlineSubTab') {
+        markStatusTabSeen('online');
+      } else if (subTabId === 'workingSubTab') {
+        markStatusTabSeen('working');
+      }
     }
 
     function getTodayStr() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    // ===== 子分頁新消息紅點 =====
+    // 每個分頁記錄自己最後看過的資料版本（最大 rowIndex）。
+    const STATUS_TAB_SEEN_KEY = 'attendance_status_tab_seen_v1';
+
+    function getStatusTabSeen() {
+      try {
+        return JSON.parse(localStorage.getItem(STATUS_TAB_SEEN_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveStatusTabSeen(data) {
+      localStorage.setItem(STATUS_TAB_SEEN_KEY, JSON.stringify(data));
+    }
+
+    function getLatestRowIndex(users) {
+      if (!users || !users.length) return 0;
+      return Math.max(...users.map(r => Number(r.rowIndex) || 0));
+    }
+
+    function showNewMessageDot(tabName, show) {
+      const dot = document.getElementById(
+        tabName === 'online' ? 'onlineNewDot' : 'workingNewDot'
+      );
+      if (dot) dot.classList.toggle('show', !!show);
+    }
+
+    function markStatusTabSeen(tabName) {
+      const seen = getStatusTabSeen();
+      const latest = tabName === 'online'
+        ? getCurrentOnlineUsers()
+        : getCurrentWorkingUsers();
+
+      seen[tabName] = getLatestRowIndex(latest);
+      saveStatusTabSeen(seen);
+      showNewMessageDot(tabName, false);
+    }
+
+    function updateStatusTabNewMessageDots(onlineUsers, workingUsers) {
+      const seen = getStatusTabSeen();
+
+      const onlineLatest = getLatestRowIndex(onlineUsers);
+      const workingLatest = getLatestRowIndex(workingUsers);
+
+      // 第一次載入不算新消息，避免頁面剛開就出現紅點。
+      if (seen.online === undefined) {
+        seen.online = onlineLatest;
+      }
+
+      if (seen.working === undefined) {
+        seen.working = workingLatest;
+      }
+
+      saveStatusTabSeen(seen);
+
+      showNewMessageDot('online', onlineLatest > Number(seen.online || 0));
+      showNewMessageDot('working', workingLatest > Number(seen.working || 0));
+
+      // 如果目前正在該分頁，視為已讀。
+      const onlineActive = document.getElementById('onlineSubTab')?.classList.contains('active');
+      const workingActive = document.getElementById('workingSubTab')?.classList.contains('active');
+
+      if (onlineActive) markStatusTabSeen('online');
+      if (workingActive) markStatusTabSeen('working');
+    }
+
+    function getCurrentOnlineUsers() {
+      const map = {};
+      rawData.forEach(info => {
+        if (!info.name || info.name === '姓名') return;
+        const key = String(info.name).trim().toLowerCase();
+        if (!map[key] || Number(info.rowIndex) > Number(map[key].rowIndex)) {
+          map[key] = info;
+        }
+      });
+
+      return Object.values(map).filter(info => {
+        // 上班中不算「目前狀態／在線」。
+        if (info.type === '上班') return false;
+        if (info.type === '狀態') return info.statusIsOn === true;
+        return info.statusIsOn === true;
+      });
+    }
+
+    function getCurrentWorkingUsers() {
+      const map = {};
+      rawData.forEach(info => {
+        if (!info.name || info.name === '姓名') return;
+        const key = String(info.name).trim().toLowerCase();
+        if (!map[key] || Number(info.rowIndex) > Number(map[key].rowIndex)) {
+          map[key] = info;
+        }
+      });
+
+      return Object.values(map).filter(info => info.type === '上班');
     }
 
     function loadAllData() {
@@ -1039,9 +1175,10 @@
 
       const latestUsers = Object.values(userMap);
 
-      // 在線：目前 ON 的人員。
+      // 在線：只顯示目前 ON 的「狀態」人員。
+      // 「上班中」獨立顯示在「目前上班中」，不再出現在目前狀態。
       const onlineUsers = latestUsers.filter(info => {
-        if (info.type === '上班') return true;
+        if (info.type === '上班') return false;
         if (info.type === '狀態') return info.statusIsOn === true;
         return info.statusIsOn === true;
       });
@@ -1236,6 +1373,15 @@
       }
 
       renderRecentOffUsers();
+
+      // 顯示目前上班中人數。
+      const workingCountEl = document.getElementById('workingCount');
+      if (workingCountEl) {
+        workingCountEl.textContent = String(workingUsers.length);
+      }
+
+      // 資料刷新後檢查兩個子分頁是否有新消息。
+      updateStatusTabNewMessageDots(onlineUsers, workingUsers);
     }
 
     function escapeHtml(value) {

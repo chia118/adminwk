@@ -1269,15 +1269,6 @@
       </div>
 
       <div class="form-group">
-        <label>狀態</label>
-        <select id="externalEditStatusInput">
-          <option value="已預約">已預約</option>
-          <option value="上班中">上班中</option>
-          <option value="已下班">已下班</option>
-        </select>
-      </div>
-
-      <div class="form-group">
         <label>開始時間</label>
         <input type="time" id="externalEditStartTimeInput" lang="en-GB" step="60">
       </div>
@@ -1318,7 +1309,6 @@
         <select id="externalStatusInput">
           <option value="已預約">已預約</option>
           <option value="上班中">上班中</option>
-          <option value="已下班">已下班</option>
         </select>
       </div>
 
@@ -1986,9 +1976,36 @@
         onlineUsers.map(info => String(info.name).trim().toLowerCase())
       );
 
-      const offlineUsers = Object.values(recentOffMap).filter(info =>
-        !onlineNameSet.has(String(info.name).trim().toLowerCase())
-      );
+      // ★ OFF 後如果人員重新打「上班卡」，
+      // 最新一筆上班紀錄代表已重新開始上班，
+      // 即使舊的 OFF 還在 1 小時有效期內，也要立即從離線人員移除。
+      const latestAttendanceMap = {};
+      rawData.forEach(info => {
+        if (!info.name || info.name === '姓名') return;
+        if (info.type !== '上班' && info.type !== '下班') return;
+
+        const key = String(info.name).trim().toLowerCase();
+        if (!latestAttendanceMap[key] ||
+            Number(info.rowIndex) > Number(latestAttendanceMap[key].rowIndex)) {
+          latestAttendanceMap[key] = info;
+        }
+      });
+
+      const offlineUsers = Object.values(recentOffMap).filter(info => {
+        const key = String(info.name).trim().toLowerCase();
+
+        // 已經是在線狀態的人，不顯示在離線。
+        if (onlineNameSet.has(key)) return false;
+
+        // 最新一筆上下班紀錄是「上班」，
+        // 代表 OFF 後已重新打上班卡，立即移除離線。
+        const latestAttendance = latestAttendanceMap[key];
+        if (latestAttendance && latestAttendance.type === '上班') {
+          return false;
+        }
+
+        return true;
+      });
 
       function renderRows(tbody, users, emptyText, offline) {
         if (!tbody) return;
@@ -2285,10 +2302,6 @@
       externalEditingId = id;
 
       document.getElementById('externalEditNameInput').value = item.name || '';
-      document.getElementById('externalEditStatusInput').value =
-        (item.status === '已預約' || item.status === '上班中' || item.status === '已下班')
-          ? item.status
-          : '已預約';
       document.getElementById('externalEditStartTimeInput').value = item.startTime || '';
       document.getElementById('externalEditEndTimeInput').value = item.endTime || '';
 
@@ -2308,7 +2321,6 @@
       if (!externalEditingId) return;
 
       const name = document.getElementById('externalEditNameInput').value.trim();
-      const status = document.getElementById('externalEditStatusInput').value.trim();
       const startTime = validateExternalTime(document.getElementById('externalEditStartTimeInput').value, '開始時間');
       const endTime = validateExternalTime(document.getElementById('externalEditEndTimeInput').value, '結束時間');
       const location = document.getElementById('externalEditLocationInput').value.trim();
@@ -2329,9 +2341,6 @@
       }
 
       item.name = name;
-      item.status = (status === '已預約' || status === '上班中' || status === '已下班')
-        ? status
-        : '已預約';
       item.startTime = startTime;
       item.endTime = endTime;
       item.location = location;
@@ -2343,7 +2352,7 @@
     }
 
     function saveExternalStatus(id, newStatus) {
-      if (newStatus !== '已預約' && newStatus !== '上班中' && newStatus !== '已下班') return;
+      if (newStatus !== '已預約' && newStatus !== '上班中') return;
 
       const list = getExternalPeople();
       const item = list.find(p => p.id === id);
@@ -2409,7 +2418,6 @@
                 onchange="saveExternalStatus('${safeId}', this.value)">
                 <option value="已預約" ${(item.status === '已預約' || item.status === '配合中' || !item.status) ? 'selected' : ''}>已預約</option>
                 <option value="上班中" ${item.status === '上班中' ? 'selected' : ''}>上班中</option>
-                <option value="已下班" ${item.status === '已下班' ? 'selected' : ''}>已下班</option>
               </select>
             </td>
             <td>

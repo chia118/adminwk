@@ -1269,6 +1269,15 @@
       </div>
 
       <div class="form-group">
+        <label>狀態</label>
+        <select id="externalEditStatusInput">
+          <option value="已預約">已預約</option>
+          <option value="上班中">上班中</option>
+          <option value="已下班">已下班</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>開始時間</label>
         <input type="time" id="externalEditStartTimeInput" lang="en-GB" step="60">
       </div>
@@ -1309,6 +1318,7 @@
         <select id="externalStatusInput">
           <option value="已預約">已預約</option>
           <option value="上班中">上班中</option>
+          <option value="已下班">已下班</option>
         </select>
       </div>
 
@@ -2275,6 +2285,10 @@
       externalEditingId = id;
 
       document.getElementById('externalEditNameInput').value = item.name || '';
+      document.getElementById('externalEditStatusInput').value =
+        (item.status === '已預約' || item.status === '上班中' || item.status === '已下班')
+          ? item.status
+          : '已預約';
       document.getElementById('externalEditStartTimeInput').value = item.startTime || '';
       document.getElementById('externalEditEndTimeInput').value = item.endTime || '';
 
@@ -2294,6 +2308,7 @@
       if (!externalEditingId) return;
 
       const name = document.getElementById('externalEditNameInput').value.trim();
+      const status = document.getElementById('externalEditStatusInput').value.trim();
       const startTime = validateExternalTime(document.getElementById('externalEditStartTimeInput').value, '開始時間');
       const endTime = validateExternalTime(document.getElementById('externalEditEndTimeInput').value, '結束時間');
       const location = document.getElementById('externalEditLocationInput').value.trim();
@@ -2314,6 +2329,9 @@
       }
 
       item.name = name;
+      item.status = (status === '已預約' || status === '上班中' || status === '已下班')
+        ? status
+        : '已預約';
       item.startTime = startTime;
       item.endTime = endTime;
       item.location = location;
@@ -2325,7 +2343,7 @@
     }
 
     function saveExternalStatus(id, newStatus) {
-      if (newStatus !== '已預約' && newStatus !== '上班中') return;
+      if (newStatus !== '已預約' && newStatus !== '上班中' && newStatus !== '已下班') return;
 
       const list = getExternalPeople();
       const item = list.find(p => p.id === id);
@@ -2391,6 +2409,7 @@
                 onchange="saveExternalStatus('${safeId}', this.value)">
                 <option value="已預約" ${(item.status === '已預約' || item.status === '配合中' || !item.status) ? 'selected' : ''}>已預約</option>
                 <option value="上班中" ${item.status === '上班中' ? 'selected' : ''}>上班中</option>
+                <option value="已下班" ${item.status === '已下班' ? 'selected' : ''}>已下班</option>
               </select>
             </td>
             <td>

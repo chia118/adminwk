@@ -30,6 +30,95 @@
       margin: 0;
     }
 
+
+    /* ===== 後台密碼鎖 ===== */
+    #adminPasswordGate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: var(--bg);
+    }
+
+    body.admin-locked {
+      overflow: hidden;
+    }
+
+    body.admin-locked #adminPasswordGate {
+      display: flex !important;
+    }
+
+    body.admin-locked > .container {
+      display: none !important;
+    }
+
+    .password-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .password-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .password-card h2 {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 1.35rem;
+    }
+
+    .password-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    .password-card input {
+      width: 100%;
+      height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .password-card input:focus {
+      border-color: var(--primary);
+    }
+
+    .password-card button {
+      width: 100%;
+      height: 44px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .password-card button:hover {
+      background: var(--primary-hover);
+    }
+
+    #adminPasswordError {
+      min-height: 20px;
+      margin-top: 10px;
+      color: #dc2626;
+      font-size: 14px;
+    }
+
     .container {
       max-width: 1440px;
       margin: 0 auto;
@@ -854,6 +943,25 @@
 
 <body>
 
+
+  <!-- 後台密碼鎖：密碼正確前不顯示後台內容 -->
+  <div id="adminPasswordGate" aria-label="後台登入">
+    <div class="password-card">
+      <div class="password-icon">🔐</div>
+      <h2>後台管理系統</h2>
+      <p>請輸入管理者密碼後進入</p>
+      <input
+        type="password"
+        id="adminPasswordInput"
+        placeholder="請輸入密碼"
+        autocomplete="current-password"
+        inputmode="text"
+      >
+      <button type="button" id="adminPasswordBtn">進入後台</button>
+      <div id="adminPasswordError" role="alert"></div>
+    </div>
+  </div>
+
   <div class="container">
 
     <div class="header">
@@ -971,7 +1079,8 @@
               <tr>
                 <th>姓名</th>
                 <th>狀態</th>
-                <th>更新時間</th>
+                <th>開始時間</th>
+                <th>結束時間</th>
                 <th>上班地點</th>
                 <th>人員備註</th>
                 <th>操作</th>
@@ -999,7 +1108,8 @@
               <tr>
                 <th>姓名</th>
                 <th>狀態</th>
-                <th>更新時間</th>
+                <th>開始時間</th>
+                <th>結束時間</th>
                 <th>上班地點</th>
                 <th>人員備註</th>
                 <th>操作</th>
@@ -1007,7 +1117,7 @@
             </thead>
             <tbody id="externalTableBody">
               <tr>
-                <td colspan="6" class="loading">目前沒有外部配合人員</td>
+                <td colspan="7" class="loading">目前沒有外部配合人員</td>
               </tr>
             </tbody>
           </table>
@@ -1159,11 +1269,13 @@
       </div>
 
       <div class="form-group">
-        <label>狀態</label>
-        <select id="externalEditStatusInput">
-          <option value="已預約">已預約</option>
-          <option value="上班中">上班中</option>
-        </select>
+        <label>開始時間</label>
+        <input type="time" id="externalEditStartTimeInput" lang="en-GB" step="60">
+      </div>
+
+      <div class="form-group">
+        <label>結束時間</label>
+        <input type="time" id="externalEditEndTimeInput" lang="en-GB" step="60">
       </div>
 
       <div class="form-group">
@@ -1198,6 +1310,16 @@
           <option value="已預約">已預約</option>
           <option value="上班中">上班中</option>
         </select>
+      </div>
+
+      <div class="form-group">
+        <label>開始時間</label>
+        <input type="time" id="externalStartTimeInput" lang="en-GB" step="60">
+      </div>
+
+      <div class="form-group">
+        <label>結束時間</label>
+        <input type="time" id="externalEndTimeInput" lang="en-GB" step="60">
       </div>
 
       <div class="form-group">
@@ -1257,6 +1379,68 @@
   </div>
 
   <script>
+
+
+    // ===== 後台密碼鎖 =====
+    const ADMIN_PASSWORD = 'mel8888';
+    const ADMIN_UNLOCK_KEY = 'daily_checkin_admin_unlocked_v1';
+
+    function unlockAdmin() {
+      const input = document.getElementById('adminPasswordInput');
+      const error = document.getElementById('adminPasswordError');
+      if (!input) return;
+
+      if (input.value === ADMIN_PASSWORD) {
+        sessionStorage.setItem(ADMIN_UNLOCK_KEY, '1');
+        document.body.classList.remove('admin-locked');
+        const gate = document.getElementById('adminPasswordGate');
+        if (gate) gate.style.display = 'none';
+        error.textContent = '';
+        input.value = '';
+        startAdminData();
+      } else {
+        error.textContent = '密碼錯誤，請重新輸入';
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    let adminDataStarted = false;
+
+    function startAdminData() {
+      if (adminDataStarted) return;
+      adminDataStarted = true;
+      const startDate = document.getElementById('salaryStartDate');
+      const endDate = document.getElementById('salaryEndDate');
+      if (startDate) startDate.value = getTodayStr();
+      if (endDate) endDate.value = getTodayStr();
+      loadAllData();
+      setInterval(loadAllData, 5000);
+    }
+
+    function initAdminPasswordGate() {
+      const gate = document.getElementById('adminPasswordGate');
+      const input = document.getElementById('adminPasswordInput');
+      const btn = document.getElementById('adminPasswordBtn');
+
+      if (sessionStorage.getItem(ADMIN_UNLOCK_KEY) === '1') {
+        document.body.classList.remove('admin-locked');
+        if (gate) gate.style.display = 'none';
+        startAdminData();
+        return;
+      }
+
+      document.body.classList.add('admin-locked');
+      if (gate) gate.style.display = 'flex';
+      if (btn) btn.addEventListener('click', unlockAdmin);
+      if (input) {
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') unlockAdmin();
+        });
+        setTimeout(() => input.focus(), 50);
+      }
+    }
+
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec';
     let rawData = [];
 
@@ -1303,6 +1487,20 @@
         return `${String(h).padStart(2, '0')}:${m}`;
       }
       return str.length > 5 ? str.substring(0, 5) : str;
+    }
+
+    function normalizeSalaryTimeInput(input) {
+      if (!input) return '';
+      let v = String(input.value || '').trim();
+      if (!v) return '';
+      const m = v.match(/^(\d{1,2})(?::?(\d{2}))$/);
+      if (!m) return v;
+      const h = Number(m[1]);
+      const min = Number(m[2]);
+      if (h > 23 || min > 59) return v;
+      v = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+      input.value = v;
+      return v;
     }
 
     function switchTab(tabId) {
@@ -1428,9 +1626,13 @@
     }
 
     function getCurrentWorkingUsers() {
+      // 「目前上班中」只看每位人員最後一筆「上班／下班」打卡，
+      // 不受後續「狀態」提交影響。
       const map = {};
       rawData.forEach(info => {
         if (!info.name || info.name === '姓名') return;
+        if (info.type !== '上班' && info.type !== '下班') return;
+
         const key = String(info.name).trim().toLowerCase();
         if (!map[key] || Number(info.rowIndex) > Number(map[key].rowIndex)) {
           map[key] = info;
@@ -1659,29 +1861,76 @@
       });
 
       Object.entries(allUsers).forEach(([key, records]) => {
-        // 目前狀態的「更新時間」必須以最後一筆「狀態」提交為準，
-        // 不再被下班打卡時間覆蓋。
         const statusRecords = records
           .filter(r => r.type === '狀態')
           .sort((a, b) => Number(b.rowIndex || 0) - Number(a.rowIndex || 0));
 
-        if (statusRecords.length) {
-          userMap[key] = statusRecords[0];
+        const punchRecords = records
+          .filter(r => r.type === '上班' || r.type === '下班')
+          .sort((a, b) => Number(b.rowIndex || 0) - Number(a.rowIndex || 0));
+
+        const latestStatus = statusRecords[0] || null;
+        const latestPunch = punchRecords[0] || null;
+
+        // 前台自行下班：以「下班」作為目前狀態的觸發點，
+        // 並把目前狀態切到「剛下班待確認」。
+        // 管理者補打卡則完全不影響目前狀態。
+        const isFrontendCheckout =
+          latestPunch &&
+          latestPunch.type === '下班' &&
+          latestPunch.isManual !== true;
+
+        if (isFrontendCheckout &&
+            (!latestStatus || Number(latestPunch.rowIndex || 0) >= Number(latestStatus.rowIndex || 0))) {
+          if (latestStatus) {
+            userMap[key] = {
+              ...latestStatus,
+              statusIsOn: true,
+              statusMode: '🌙 剛下班待確認'
+            };
+          } else {
+            // 極端情況：沒有任何狀態紀錄時，仍建立顯示用的待確認資料。
+            // 這筆只是前端顯示資料，不會寫回 Google Sheet。
+            userMap[key] = {
+              ...latestPunch,
+              type: '狀態',
+              statusIsOn: true,
+              statusMode: '🌙 剛下班待確認',
+              note: ''
+            };
+          }
           return;
         }
 
-        // 沒有狀態提交紀錄時，才使用最後一筆上班/下班資料。
+        // 沒有前台自行下班觸發時，維持原本的狀態優先邏輯。
+        if (latestStatus) {
+          userMap[key] = latestStatus;
+          return;
+        }
+
         records.sort((a, b) => Number(b.rowIndex || 0) - Number(a.rowIndex || 0));
         userMap[key] = records[0];
       });
 
       const latestUsers = Object.values(userMap);
 
-      // 在線：只顯示目前 ON 的「狀態」人員。
-      // 「上班中」獨立顯示在「目前上班中」，不再出現在目前狀態。
-      // OFF 會從在線人員移除，改顯示在下方「離線人員」。
+      // 「目前上班中」獨立顯示在上班中分頁。
+      // 只要人員最後一筆上下班打卡仍是「上班」，就不再出現在「目前狀態／在線人員」。
+      // 即使上班後又提交「狀態」，也必須留在「目前上班中」。
+      const workingUsersForOnlineFilter = getCurrentWorkingUsers();
+      const workingNameSet = new Set(
+        workingUsersForOnlineFilter.map(info =>
+          String(info.name).trim().toLowerCase()
+        )
+      );
+
+      // 在線：只顯示目前 ON、且目前沒有上班中的人員。
+      // 上班中的人員僅顯示在「目前上班中」。
       const onlineUsers = latestUsers.filter(info => {
-        if (info.type === '上班') return false;
+        const nameKey = String(info.name || '').trim().toLowerCase();
+
+        // 目前上班中 → 從在線人員移除
+        if (workingNameSet.has(nameKey)) return false;
 
         const isOff =
           info.statusIsOn === false ||
@@ -1690,7 +1939,11 @@
 
         if (isOff) return false;
 
-        if (info.type === '狀態') return info.statusIsOn === true;
+        // 「在線人員」只由前台/狀態資料決定。
+        // 管理者補打的上班、下班紀錄即使帶有 statusIsOn=true，
+        // 也不得因此同步到「在線人員」。
+        if (info.type !== '狀態') return false;
+
         return info.statusIsOn === true;
       });
 
@@ -1837,8 +2090,10 @@
       renderRows(onlineTbody, onlineUsers, '目前沒有在線人員', false);
       renderRows(offlineTbody, offlineUsers, '最近 1 小時內沒有離線人員', true);
 
-      // 「目前上班中」子分頁保留原本功能。
-      const workingUsers = latestUsers.filter(info => info.type === '上班');
+      // 「目前上班中」獨立依每位人員最後一筆「上班／下班」打卡判斷。
+      // 即使上班後又提交了「狀態」，只要尚未下班，仍維持在「目前上班中」。
+      // 一旦最新的上下班打卡變成「下班」，就會從此分頁移除。
+      const workingUsers = getCurrentWorkingUsers();
 
       if (workingTbody) {
         if (!workingUsers.length) {
@@ -1936,9 +2191,38 @@
       return `${y}-${m}-${d} ${h}:${min}`;
     }
 
+    function normalizeExternalTime(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      const m = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+      if (!m) return null;
+
+      const h = Number(m[1]);
+      const min = Number(m[2]);
+
+      if (!Number.isInteger(h) || !Number.isInteger(min) ||
+          h < 0 || h > 23 || min < 0 || min > 59) {
+        return null;
+      }
+
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+
+    function validateExternalTime(value, label) {
+      const normalized = normalizeExternalTime(value);
+      if (normalized === null) {
+        alert(`${label}請使用 24 小時制 HH:MM，例如 08:30 或 23:45`);
+        return null;
+      }
+      return normalized;
+    }
+
     function openExternalAddModal() {
       document.getElementById('externalNameInput').value = '';
       document.getElementById('externalStatusInput').value = '已預約';
+      document.getElementById('externalStartTimeInput').value = '';
+      document.getElementById('externalEndTimeInput').value = '';
       document.getElementById('externalLocationInput').value = '';
       document.getElementById('externalNoteInput').value = '';
       document.getElementById('externalAddModal').style.display = 'flex';
@@ -1952,8 +2236,12 @@
     function saveExternalPerson() {
       const name = document.getElementById('externalNameInput').value.trim();
       const status = document.getElementById('externalStatusInput').value.trim();
+      const startTime = validateExternalTime(document.getElementById('externalStartTimeInput').value, '開始時間');
+      const endTime = validateExternalTime(document.getElementById('externalEndTimeInput').value, '結束時間');
       const location = document.getElementById('externalLocationInput').value.trim();
       const note = document.getElementById('externalNoteInput').value.trim();
+
+      if (startTime === null || endTime === null) return;
 
       if (!name) {
         alert('請輸入姓名！');
@@ -1965,7 +2253,8 @@
         id: `ext_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         name,
         status: status || '已預約',
-        updatedAt: getExternalNowText(),
+        startTime,
+        endTime,
         location,
         note
       });
@@ -1985,12 +2274,9 @@
       externalEditingId = id;
 
       document.getElementById('externalEditNameInput').value = item.name || '';
+      document.getElementById('externalEditStartTimeInput').value = item.startTime || '';
+      document.getElementById('externalEditEndTimeInput').value = item.endTime || '';
 
-      let status = item.status || '已預約';
-      if (status === '配合中') status = '已預約';
-      if (status !== '已預約' && status !== '上班中') status = '已預約';
-
-      document.getElementById('externalEditStatusInput').value = status;
       document.getElementById('externalEditLocationInput').value = item.location || '';
       document.getElementById('externalEditNoteInput').value = item.note || '';
 
@@ -2007,17 +2293,15 @@
       if (!externalEditingId) return;
 
       const name = document.getElementById('externalEditNameInput').value.trim();
-      const status = document.getElementById('externalEditStatusInput').value;
+      const startTime = validateExternalTime(document.getElementById('externalEditStartTimeInput').value, '開始時間');
+      const endTime = validateExternalTime(document.getElementById('externalEditEndTimeInput').value, '結束時間');
       const location = document.getElementById('externalEditLocationInput').value.trim();
       const note = document.getElementById('externalEditNoteInput').value.trim();
 
+      if (startTime === null || endTime === null) return;
+
       if (!name) {
         alert('請輸入姓名！');
-        return;
-      }
-
-      if (status !== '已預約' && status !== '上班中') {
-        alert('狀態只能選擇「已預約」或「上班中」。');
         return;
       }
 
@@ -2029,13 +2313,44 @@
       }
 
       item.name = name;
-      item.status = status;
+      item.startTime = startTime;
+      item.endTime = endTime;
       item.location = location;
       item.note = note;
-      item.updatedAt = getExternalNowText();
 
       saveExternalPeople(list);
       closeExternalEditModal();
+      renderExternalPeople();
+    }
+
+    function saveExternalStatus(id, newStatus) {
+      if (newStatus !== '已預約' && newStatus !== '上班中') return;
+
+      const list = getExternalPeople();
+      const item = list.find(p => p.id === id);
+      if (!item) return;
+
+      item.status = newStatus;
+
+      saveExternalPeople(list);
+      renderExternalPeople();
+    }
+
+    function saveExternalTime(id, field, value) {
+      if (field !== 'startTime' && field !== 'endTime') return;
+
+      const normalized = validateExternalTime(value, field === 'startTime' ? '開始時間' : '結束時間');
+      if (normalized === null) {
+        renderExternalPeople();
+        return;
+      }
+
+      const list = getExternalPeople();
+      const item = list.find(p => p.id === id);
+      if (!item) return;
+
+      item[field] = normalized;
+      saveExternalPeople(list);
       renderExternalPeople();
     }
 
@@ -2060,7 +2375,7 @@
       if (countEl) countEl.textContent = list.length;
 
       if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">目前沒有外部配合人員</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">目前沒有外部配合人員</td></tr>';
         return;
       }
 
@@ -2069,8 +2384,32 @@
         return `
           <tr>
             <td><strong>${escapeHtml(item.name)}</strong></td>
-            <td><span class="status-badge" style="color:#7d6e63;">${escapeHtml(item.status === '配合中' ? '已預約' : (item.status || '-'))}</span></td>
-            <td>${escapeHtml(item.updatedAt || '-')}</td>
+            <td>
+              <select class="mode-select"
+                style="min-width:110px;"
+                onchange="saveExternalStatus('${safeId}', this.value)">
+                <option value="已預約" ${(item.status === '已預約' || item.status === '配合中' || !item.status) ? 'selected' : ''}>已預約</option>
+                <option value="上班中" ${item.status === '上班中' ? 'selected' : ''}>上班中</option>
+              </select>
+            </td>
+            <td>
+              <input type="time"
+                class="salary-time external-time-picker"
+                lang="en-GB"
+                step="60"
+                style="width:112px;padding:7px 8px;"
+                value="${escapeHtml(item.startTime || '')}"
+                onchange="saveExternalTime('${safeId}', 'startTime', this.value)">
+            </td>
+            <td>
+              <input type="time"
+                class="salary-time external-time-picker"
+                lang="en-GB"
+                step="60"
+                style="width:112px;padding:7px 8px;"
+                value="${escapeHtml(item.endTime || '')}"
+                onchange="saveExternalTime('${safeId}', 'endTime', this.value)">
+            </td>
             <td>📍 ${escapeHtml(item.location || '-')}</td>
             <td>${escapeHtml(item.note || '-')}</td>
             <td>
@@ -2211,8 +2550,8 @@
 
       row.innerHTML = `
         <td><input type="date" class="salary-date"></td>
-        <td><input type="time" class="salary-time" value="00:00"></td>
-        <td><input type="time" class="salary-time" value="00:00"></td>
+        <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
+        <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
         <td><input type="text" class="salary-location" placeholder="地點"></td>
         <td><input type="number" class="input-money salary-hourly" min="0" step="1" value="0"></td>
         <td><input type="number" class="input-money salary-fare" min="0" step="1" value="0"></td>
@@ -2267,10 +2606,12 @@
       if (!dateInput || timeInputs.length < 2 || !hoursEl) return;
 
       const date = dateInput.value;
+      normalizeSalaryTimeInput(timeInputs[0]);
+      normalizeSalaryTimeInput(timeInputs[1]);
       const startTime = timeInputs[0].value;
       const endTime = timeInputs[1].value;
 
-      if (!date || !startTime || !endTime) {
+      if (!date || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) {
         hoursEl.textContent = '0.0';
         updateManualSalarySummary();
         return;
@@ -2422,8 +2763,8 @@
             <tr>
               <td class="manual-only"></td>
               <td><input type="date" value="${escapeSalaryHtml(s.date)}" class="salary-date"></td>
-              <td><input type="time" value="${escapeSalaryHtml(s.startTime)}" class="salary-time"></td>
-              <td><input type="time" value="${escapeSalaryHtml(s.endTime)}" class="salary-time"></td>
+              <td><input type="text" value="${escapeSalaryHtml(s.startTime)}" class="salary-time" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
+              <td><input type="text" value="${escapeSalaryHtml(s.endTime)}" class="salary-time" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
               <td>
                 <div style="display:flex; align-items:center; gap:3px; min-width:0;">
                   <span style="flex:0 0 auto;">${locationMarker}</span>
@@ -2510,10 +2851,12 @@
       if (!dateInput || timeInputs.length < 2 || !hoursEl) return;
 
       const date = dateInput.value;
+      normalizeSalaryTimeInput(timeInputs[0]);
+      normalizeSalaryTimeInput(timeInputs[1]);
       const startTime = timeInputs[0].value;
       const endTime = timeInputs[1].value;
 
-      if (!date || !startTime || !endTime) {
+      if (!date || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) {
         hoursEl.textContent = '0.0';
         updateSalarySummary();
         return;
@@ -2522,6 +2865,13 @@
       hoursEl.textContent = calcHours(date, startTime, date, endTime);
       updateSalarySummary();
     }
+
+    document.addEventListener('blur', function(e) {
+      if (e.target.classList.contains('salary-time')) {
+        normalizeSalaryTimeInput(e.target);
+        recalculateSalaryRow(e.target.closest('tr'));
+      }
+    }, true);
 
     document.addEventListener('change', function(e) {
       if (
@@ -2763,7 +3113,7 @@
         location: document.getElementById('modalLocation').value.trim(),
         note: finalNote,
         statusIsOn: true,
-        statusMode: typeVal === '上班' ? 'BOOK' : '⏳ 待確認 (Pending)'
+        statusMode: '無'
       };
 
       if (!payload.name) {
@@ -2779,11 +3129,15 @@
       .then(res => res.json())
       .then(res => {
         if (res.result === 'success') {
+          // 管理者補打卡與「目前狀態／在線人員」完全分開。
+          // 不論補打上班或下班，都不修改前台目前狀態，也不觸發「剛下班待確認」。
+
           closeAddModal();
           document.getElementById('modalName').value = '';
           document.getElementById('modalLocation').value = '';
           document.getElementById('modalNote').value = '';
-          loadAllData();
+          // 等待模式更新請求送出後再重新讀取，確保下拉選單顯示最新模式。
+          setTimeout(() => loadAllData(), typeVal === '下班' ? 300 : 0);
         } else {
           alert('新增失敗：' + (res.message || '未知錯誤'));
         }
@@ -2795,11 +3149,7 @@
     }
 
     window.onload = () => {
-      document.getElementById('salaryStartDate').value = getTodayStr();
-      document.getElementById('salaryEndDate').value = getTodayStr();
-      loadAllData();
-      
-      setInterval(loadAllData, 5000);
+      initAdminPasswordGate();
     };
   </script>
 

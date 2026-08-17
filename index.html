@@ -1126,23 +1126,34 @@
           </table>
         </div>
       </div>
+    </div>
 
+    
       <div id="weeklyReportSubTab" class="sub-tab-content">
         <div class="status-section-header">
           <div class="status-section-title" style="color:#7d6e63;">📅 每週回報</div>
         </div>
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>姓名</th><th>日期</th><th>時間</th><th>狀態</th><th>備註</th></tr></thead>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>日期</th>
+                <th>時間</th>
+                <th>狀態</th>
+                <th>備註</th>
+              </tr>
+            </thead>
             <tbody id="weeklyReportTableBody">
-              <tr><td colspan="5" class="loading">目前沒有每週回報資料</td></tr>
+              <tr>
+                <td colspan="5" class="loading">目前沒有每週回報資料</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
 
-    <div id="historyTab" class="tab-content">
+<div id="historyTab" class="tab-content">
       <div class="filter-panel">
         <input
           type="text"
@@ -1287,9 +1298,9 @@
       <div class="form-group">
         <label>狀態</label>
         <select id="externalEditStatusInput">
-          <option value="已預約">已預約</option>
-          <option value="上班中">上班中</option>
-          <option value="已下班">已下班</option>
+          <option value="已預約">🟢 已預約</option>
+          <option value="上班中">🔵 上班中</option>
+          <option value="已下班">🔴 已下班</option>
         </select>
       </div>
 
@@ -1567,23 +1578,30 @@
     function renderWeeklyReport() {
       const tbody = document.getElementById('weeklyReportTableBody');
       if (!tbody) return;
-      const list = rawData.filter(r =>
-        String(r.type || '').trim() === '每週回報' ||
-        String(r.note || '').includes('每週回報') ||
-        String(r.statusMode || '').includes('每週回報')
-      );
-      if (!list.length) {
+
+      const weekly = rawData.filter(info => {
+        const type = String(info.type || '').trim();
+        const note = String(info.note || '').trim();
+        const mode = String(info.statusMode || '').trim();
+        return type === '每週回報' || note.includes('每週回報') || mode.includes('每週回報');
+      });
+
+      if (!weekly.length) {
         tbody.innerHTML = '<tr><td colspan="5" class="loading">目前沒有每週回報資料</td></tr>';
         return;
       }
-      tbody.innerHTML = [...list].reverse().map(r => `
-        <tr>
-          <td>${escapeHtml(r.name || '')}</td>
-          <td>${escapeHtml(r.date || '')}</td>
-          <td>${escapeHtml(r.time || '')}</td>
-          <td>${escapeHtml(r.statusMode || r.type || '')}</td>
-          <td>${escapeHtml(r.note || '')}</td>
-        </tr>`).join('');
+
+      tbody.innerHTML = weekly
+        .sort((a, b) => Number(b.rowIndex || 0) - Number(a.rowIndex || 0))
+        .map(info => `
+          <tr>
+            <td>${escapeHtml(info.name || '')}</td>
+            <td>${escapeHtml(info.date || '')}</td>
+            <td>${escapeHtml(info.time || '')}</td>
+            <td>${escapeHtml(info.statusMode || info.type || '')}</td>
+            <td>${escapeHtml(info.note || '')}</td>
+          </tr>
+        `).join('');
     }
 
     function getTodayStr() {
@@ -1720,7 +1738,6 @@
 
             renderStatusOnUsers();
             renderHistory();
-            renderWeeklyReport();
           }
         })
         .catch(err => {
@@ -2095,7 +2112,7 @@
             let modeHtml;
 
             if (isOff) {
-              modeHtml = '<span>已離線</span>';
+              modeHtml = '<span style="color:#d94b4b;font-weight:600;">🔴 已離線</span>';
             } else {
               const availableModes = [
                 '🥳 只嗨 (High Only)',
@@ -2354,7 +2371,6 @@
       externalEditingId = id;
 
       document.getElementById('externalEditNameInput').value = item.name || '';
-      document.getElementById('externalEditStatusInput').value = item.status || '已預約';
       document.getElementById('externalEditStartTimeInput').value = item.startTime || '';
       document.getElementById('externalEditEndTimeInput').value = item.endTime || '';
 
@@ -2374,7 +2390,6 @@
       if (!externalEditingId) return;
 
       const name = document.getElementById('externalEditNameInput').value.trim();
-      const status = document.getElementById('externalEditStatusInput').value.trim();
       const startTime = validateExternalTime(document.getElementById('externalEditStartTimeInput').value, '開始時間');
       const endTime = validateExternalTime(document.getElementById('externalEditEndTimeInput').value, '結束時間');
       const location = document.getElementById('externalEditLocationInput').value.trim();
@@ -2395,7 +2410,6 @@
       }
 
       item.name = name;
-      item.status = status || '已預約';
       item.startTime = startTime;
       item.endTime = endTime;
       item.location = location;

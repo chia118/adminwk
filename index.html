@@ -938,6 +938,178 @@
     .salary-table input.salary-hourly {
       text-align: left !important;
     }
+
+    /* ===== 每週回報：同姓名合併顯示 + 人員分隔線 ===== */
+    #weeklyReportTableBody .btn-delete {
+      background-color: #ffffff;
+      color: var(--primary);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      margin-left: 4px;
+    }
+
+    #weeklyReportTableBody .btn-delete:hover {
+      background-color: #faf9f7;
+      border-color: #d8d0c9;
+    }
+
+    #weeklyReportTableBody .btn-delete .delete-x {
+      color: #dc2626;
+      font-weight: 700;
+      margin-right: 3px;
+    }
+
+    #weeklyReportTableBody .weekly-status-select {
+      width: 125px;
+      min-width: 125px;
+      padding: 4px 6px;
+      font-size: 0.82rem;
+    }
+
+    #weeklyReportTableBody .weekly-management-status-select {
+      width: 115px;
+      min-width: 115px;
+      padding: 4px 6px;
+      font-size: 0.82rem;
+    }
+
+    /* ===== 每週回報搜尋列 ===== */
+    .weekly-report-search-wrap {
+      width: 100%;
+      margin: 0 0 10px 0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .weekly-report-search-bar {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      min-width: 0;
+      height: 42px;
+      margin-left: 20px;
+      transform: none;
+      margin-top: 8px;
+      padding-left: 0;
+      box-sizing: border-box;
+      gap: 0;
+    }
+
+    .weekly-search-label {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-sizing: border-box;
+      color: #6b625a;
+      font-size: 0.88rem;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: none;
+    }
+
+    .weekly-date-input {
+      flex: 0 0 185px;
+      width: 185px;
+      height: 36px;
+      margin-left: 10px;
+      padding: 5px 10px;
+      border: 1px solid #d8d0c8;
+      border-radius: 6px;
+      background: #fff;
+      color: #5d554e;
+      font-size: 0.88rem;
+      box-sizing: border-box;
+    }
+
+    .weekly-name-label {
+      margin-left: 12px;
+    }
+
+    .weekly-name-input {
+      flex: 0 0 215px;
+      width: 215px;
+      height: 36px;
+      margin-left: 8px;
+      padding: 5px 10px;
+      border: 1px solid #d8d0c8;
+      border-radius: 6px;
+      background: #fff;
+      color: #5d554e;
+      font-size: 0.88rem;
+      box-sizing: border-box;
+    }
+
+    .weekly-date-input:focus,
+    .weekly-name-input:focus {
+      outline: none;
+      border-color: #9b8d80;
+      box-shadow: 0 0 0 2px rgba(155, 141, 128, 0.12);
+    }
+
+
+    #weeklyReportTableBody .weekly-report-note-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 190px;
+    }
+
+    #weeklyReportTableBody .weekly-report-note-text {
+      overflow-wrap: anywhere;
+    }
+
+    #weeklyReportTableBody .weekly-management-note-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 190px;
+    }
+
+    #weeklyReportTableBody .weekly-management-note-text {
+      overflow-wrap: anywhere;
+    }
+
+    #weeklyReportTableBody .weekly-note-pencil {
+      border: 0;
+      background: transparent;
+      padding: 1px 3px;
+      margin: 0;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      opacity: 0.8;
+    }
+
+    #weeklyReportTableBody .weekly-note-pencil:hover {
+      opacity: 1;
+    }
+
+    #weeklyReportTableBody .weekly-person-name {
+      vertical-align: middle;
+      text-align: center;
+      font-weight: 700;
+      border-right: 1px solid var(--border);
+      background: #fcfbf9;
+      min-width: 105px;
+    }
+
+    #weeklyReportTableBody tr.weekly-person-group-start td {
+      border-top: 3px solid #cfc6bd;
+    }
+
+    #weeklyReportTableBody tr.weekly-person-group-start:first-child td {
+      border-top: 1px solid var(--border);
+    }
+
+    #weeklyReportTableBody tr.weekly-person-group-start td.weekly-person-name {
+      border-top: 3px solid #cfc6bd;
+    }
+
 </style>
 </head>
 
@@ -980,6 +1152,10 @@
 
       <button class="tab-btn" onclick="switchTab('salaryTab')">
         💰 薪資計算
+      </button>
+
+      <button class="tab-btn" onclick="switchTab('weeklyReportTab')">
+        📅 每週回報
       </button>
     </div>
 
@@ -1122,6 +1298,60 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+    </div>
+
+    <div id="weeklyReportTab" class="tab-content">
+      <div class="status-section-header">
+        <div class="status-section-title" style="color:#7d6e63;">
+          📅 每週回報
+        </div>
+      </div>
+
+      <div class="weekly-report-search-wrap">
+        <div class="weekly-report-search-bar" aria-label="每週回報搜尋">
+          <label class="weekly-search-label" for="weeklyReportDateFilter">搜尋日期</label>
+          <input class="weekly-date-input" type="date" id="weeklyReportDateFilter"
+            aria-label="搜尋每週回報日期"
+            onchange="filterWeeklyReports()">
+
+          <label class="weekly-search-label weekly-name-label" for="weeklyReportNameFilter">搜尋姓名</label>
+          <input class="weekly-name-input" type="text" id="weeklyReportNameFilter"
+            placeholder="請輸入姓名"
+            aria-label="搜尋每週回報姓名"
+            oninput="filterWeeklyReports()">
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="weekly-report-table">
+          <colgroup>
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:17%">
+            <col style="width:19%">
+            <col style="width:14%">
+            <col style="width:16%">
+            <col style="width:6%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>日期</th>
+              <th>週報狀態</th>
+              <th>週報備註</th>
+              <th>管理狀態</th>
+              <th>管理備註</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="weeklyReportTableBody">
+            <tr>
+              <td colspan="7" class="loading">資料載入中...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1452,6 +1682,7 @@
 
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec';
     let rawData = [];
+    let weeklyRawData = [];
 
     function formatDate(rawVal) {
       if (!rawVal) return '';
@@ -1519,11 +1750,16 @@
       const idx = {
         statusOnTab: 0,
         historyTab: 1,
-        salaryTab: 2
+        salaryTab: 2,
+        weeklyReportTab: 3
       }[tabId];
 
       document.querySelectorAll('.tab-btn')[idx].classList.add('active');
       document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'weeklyReportTab') {
+        renderWeeklyReport();
+      }
     }
 
     function switchSubTab(subTabId, btn) {
@@ -1673,12 +1909,15 @@
                 const t = String(row[4] || '').trim();
                 return t === '上班' || t === '狀態';
               })(),
-              statusMode: String(row[7] || '🥳 只嗨 (High Only)').trim()
+              statusMode: String(row[7] ?? '').trim(),
+              managementStatus: String(row[8] ?? '').trim(),
+              managementNote: String(row[9] ?? '').trim()
             }));
 
             renderStatusOnUsers();
             renderHistory();
           }
+          loadWeeklyReports();
         })
         .catch(err => {
           console.error('讀取資料失敗：', err);
@@ -1851,6 +2090,88 @@
       });
     }
 
+
+    // 後台「在線人員 → 選擇模式」統一讀取工作表中的狀態值。
+    // 前台可能曾寫入：
+    //   只嗨 / 🥳 只嗨 / 🥳 只嗨 (High Only) / 🥳 只嗨\nHigh Only
+    //   只酒 / 🍷 只酒 / 🍷 只酒 (Drinks Only) / 🍷 只酒\nDrinks Only
+    //   都可 / 🎉 都可 / 🎉 都可 (Both) / 🎉 都可\nBoth
+    // 後台一律轉成中文下拉選單值，避免瀏覽器找不到 selected
+    // 而自動跳回第一個「只嗨」。
+    function normalizeOnlineMode(statusMode) {
+      const s = String(statusMode ?? '')
+        .replace(/\u200B/g, '')
+        .replace(/\r/g, '')
+        .trim();
+
+      const compact = s
+        .replace(/\n+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const lower = compact.toLowerCase();
+
+      if (
+        compact === '只嗨' ||
+        compact === '嗨' ||
+        compact.includes('只嗨') ||
+        lower.includes('high only') ||
+        lower === 'high'
+      ) {
+        return '🥳 只嗨';
+      }
+
+      if (
+        compact === '只酒' ||
+        compact === '酒' ||
+        compact.includes('只酒') ||
+        lower.includes('drinks only') ||
+        lower === 'drinks' ||
+        lower === 'drink'
+      ) {
+        return '🍷 只酒';
+      }
+
+      if (
+        compact === '都可' ||
+        compact === '都可以' ||
+        compact.includes('都可') ||
+        lower.includes('both')
+      ) {
+        return '🎉 都可';
+      }
+
+      if (
+        compact === 'BOOK' ||
+        compact === '已預約' ||
+        compact.includes('已預約') ||
+        lower === 'booked'
+      ) {
+        return '📅 已預約';
+      }
+
+      if (
+        compact === '待確認' ||
+        compact === 'Pending' ||
+        compact === '⏳ 待確認 (Pending)' ||
+        compact === '🌙 剛下班待確認' ||
+        compact === '剛下班待確認' ||
+        compact.includes('剛下班待確認') ||
+        lower.includes('pending')
+      ) {
+        return '🌙 剛下班待確認';
+      }
+
+      if (
+        compact === 'OFF' ||
+        compact === '已離線' ||
+        compact === '🔴 已離線'
+      ) {
+        return 'OFF';
+      }
+
+      return '';
+    }
 
     function renderStatusOnUsers() {
       const onlineTbody = document.getElementById('onlineTableBody');
@@ -2056,35 +2377,20 @@
               modeHtml = '<span>已離線</span>';
             } else {
               const availableModes = [
-                '🥳 只嗨 (High Only)',
-                '🍷 只酒 (Drinks Only)',
-                '🎉 都可以 (Both)',
+                '🥳 只嗨',
+                '🍷 只酒',
+                '🎉 都可',
                 '📅 已預約',
                 '🌙 剛下班待確認',
                 '🔴 已離線'
               ];
 
-              let currentMode = String(info.statusMode || '').trim();
-
-              if (currentMode === 'BOOK' || currentMode === '已預約') {
-                currentMode = '📅 已預約';
-              } else if (currentMode === '只嗨 (High Only)') {
-                currentMode = '🥳 只嗨 (High Only)';
-              } else if (currentMode === '只酒 (Drinks Only)') {
-                currentMode = '🍷 只酒 (Drinks Only)';
-              } else if (currentMode === '都可以 (Both)') {
-                currentMode = '🎉 都可以 (Both)';
-              } else if (
-                currentMode === '⏳ 待確認 (Pending)' ||
-                currentMode === '待確認' ||
-                currentMode === 'Pending'
-              ) {
-                currentMode = '🌙 剛下班待確認';
-              }
+              const currentMode = normalizeOnlineMode(info.statusMode);
 
               modeHtml = `
                 <select class="mode-select"
                   onchange="updateStatusModeFromDropdown(this, ${info.rowIndex})">
+                  ${currentMode ? '' : '<option value="" selected disabled>請選擇模式</option>'}
                   ${availableModes.map(m => {
                     const value = m === '🔴 已離線' ? 'OFF' : m;
                     const selected = value === currentMode ? 'selected' : '';
@@ -2463,6 +2769,551 @@
           </tr>
         `;
       }).join('');
+    }
+
+    // ===== 每週回報 =====
+    // 每週回報顯示工作表2的全部資料。
+    // 同一人同一天若有重複資料，只顯示最後一筆。
+    function getWeekStartDate() {
+      const now = new Date();
+      const day = now.getDay(); // 0 = Sunday
+      const diff = day === 0 ? -6 : 1 - day;
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      start.setDate(start.getDate() + diff);
+      return start;
+    }
+
+    function loadWeeklyReports() {
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'getWeeklyReports'
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result !== 'success') {
+          throw new Error(res.message || '無法取得每週回報資料');
+        }
+
+        weeklyRawData = Array.isArray(res.weeklyReports)
+          ? res.weeklyReports.map(item => {
+              const status = normalizeWeeklyStatus(item.status);
+              return {
+                rowIndex: Number(item.rowIndex) || 0,
+                name: String(item.name || '').trim(),
+                date: String(item.date || '').trim().replace(/\//g, '-'),
+                // status 與 statusMode 都指向同一個「工作表2 C欄」值。
+                status: status,
+                statusMode: status,
+                note: String(item.note || '').trim(),
+                managementStatus: String(item.managementStatus || '').trim(),
+                managementNote: String(item.managementNote || '').trim()
+              };
+            })
+          : [];
+
+        renderWeeklyReport();
+      })
+      .catch(err => {
+        console.error('讀取每週回報失敗：', err);
+        const tbody = document.getElementById('weeklyReportTableBody');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="7" class="loading">每週回報讀取失敗，請重新整理</td></tr>';
+        }
+      });
+    }
+
+    let weeklyReportSelectedDate = '';
+
+    function filterWeeklyReports() {
+      renderWeeklyReport();
+    }
+
+    function filterWeeklyReportsByDate(value) {
+      // 保留舊函式名稱，避免其他既有程式呼叫時出錯。
+      renderWeeklyReport();
+    }
+
+    function renderWeeklyReport() {
+      const tbody = document.getElementById('weeklyReportTableBody');
+      if (!tbody) return;
+
+      // 每週回報直接顯示工作表2回傳的全部資料。
+      // 同一姓名的資料集中在一起，姓名只顯示一次。
+      const latestByPersonDate = {};
+
+      weeklyRawData.forEach(info => {
+        if (!info || !info.name || !info.date) return;
+
+        const name = String(info.name).trim();
+        const dateStr = String(info.date).trim().replace(/\//g, '-');
+        const key = `${name.toLowerCase()}__${dateStr}`;
+
+        // 同一姓名＋同一天若有重複資料，只顯示最後一筆。
+        if (
+          !latestByPersonDate[key] ||
+          Number(info.rowIndex || 0) > Number(latestByPersonDate[key].rowIndex || 0)
+        ) {
+          latestByPersonDate[key] = {
+            ...info,
+            name: name,
+            date: dateStr
+          };
+        }
+      });
+
+      // 搜尋條件：
+      // ① 有選日期：只顯示該日期
+      // ② 有輸入姓名：顯示該姓名的「全部每週回報資料」，不限制日期
+      // ③ 日期＋姓名同時使用：顯示該姓名在指定日期的回報
+      const dateInput = document.getElementById('weeklyReportDateFilter');
+      const nameInput = document.getElementById('weeklyReportNameFilter');
+
+      const selectedDate = dateInput
+        ? String(dateInput.value || '').trim()
+        : String(weeklyReportSelectedDate || '').trim();
+
+      const nameKeyword = nameInput
+        ? String(nameInput.value || '').trim().toLowerCase()
+        : '';
+
+      const filteredReports = Object.values(latestByPersonDate).filter(info => {
+        const infoDate = String(info.date || '').trim();
+        const infoName = String(info.name || '').trim().toLowerCase();
+
+        const dateMatch = !selectedDate || infoDate === selectedDate;
+        const nameMatch = !nameKeyword || infoName.includes(nameKeyword);
+
+        return dateMatch && nameMatch;
+      });
+
+      // 先依姓名分組，再依日期前 → 後排列。
+      const grouped = {};
+
+      filteredReports.forEach(info => {
+        const key = String(info.name).trim().toLowerCase();
+        if (!grouped[key]) {
+          grouped[key] = {
+            name: info.name,
+            rows: []
+          };
+        }
+        grouped[key].rows.push(info);
+      });
+
+      const groups = Object.values(grouped).sort((a, b) =>
+        String(a.name).localeCompare(String(b.name), 'zh-Hant')
+      );
+
+      groups.forEach(group => {
+        // 同一姓名的日期由前 → 後排列。
+        group.rows.sort((a, b) =>
+          String(a.date || '').localeCompare(String(b.date || ''))
+        );
+      });
+
+      if (!groups.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">目前沒有符合搜尋條件的每週回報資料</td></tr>';
+        return;
+      }
+
+      const availableModes = [
+        { value: '只嗨', label: '🥳 只嗨' },
+        { value: '只酒', label: '🍷 只酒' },
+        { value: '都可', label: '🎉 都可' }
+      ];
+
+      let html = '';
+
+      groups.forEach((group, groupIndex) => {
+        group.rows.forEach((info, rowIndex) => {
+          // 工作表2 C欄實際值 → 後台下拉選單值：
+          // 🥳 只嗨 / 🍷 只酒 / 🎉 都可
+          const currentMode = normalizeWeeklyStatus(info.status ?? info.statusMode);
+
+          const groupStartClass = groupIndex > 0 && rowIndex === 0
+            ? ' class="weekly-person-group-start"'
+            : '';
+
+          html += `<tr${groupStartClass}>`;
+
+          // 同一個人只顯示一次姓名，使用 rowspan 合併整組。
+          if (rowIndex === 0) {
+            html += `
+              <td class="weekly-person-name" rowspan="${group.rows.length}">
+                <strong>${escapeHtml(group.name)}</strong>
+              </td>
+            `;
+          }
+
+          html += `
+            <td>${escapeHtml(info.date || '-')}</td>
+            <td>
+              <select
+                class="mode-select weekly-status-select"
+                data-row-index="${Number(info.rowIndex)}"
+                onchange="updateWeeklyReportStatus(${Number(info.rowIndex)}, this.value, this)"
+                aria-label="調整週報狀態"
+              >
+                ${availableModes.map(mode =>
+                  `<option value="${escapeHtml(mode.value)}" ${mode.value === currentMode ? 'selected' : ''}>${escapeHtml(mode.label)}</option>`
+                ).join('')}
+              </select>
+            </td>
+            <td>
+              <div class="weekly-report-note-cell">
+                <span class="weekly-report-note-text">${escapeHtml(info.note || '-')}</span>
+                <button
+                  type="button"
+                  class="weekly-note-pencil"
+                  title="編輯週報備註"
+                  aria-label="編輯週報備註"
+                  onclick="editWeeklyReportNote(${Number(info.rowIndex)})"
+                >✏️</button>
+              </div>
+            </td>
+            <td>
+              <select
+                class="mode-select weekly-management-status-select"
+                data-row-index="${Number(info.rowIndex)}"
+                onchange="updateWeeklyManagementStatus(${Number(info.rowIndex)}, this.value, this)"
+                aria-label="調整管理狀態"
+              >
+                <option value="待確認" ${(!String(info.managementStatus || '').trim() || String(info.managementStatus || '').trim() === '待確認') ? 'selected' : ''}>⏳ 待確認</option>
+                <option value="已預約" ${String(info.managementStatus || '').trim() === '已預約' ? 'selected' : ''}>📅 已預約</option>
+              </select>
+            </td>
+            <td>
+              <div class="weekly-management-note-cell">
+                <span class="weekly-management-note-text">${escapeHtml(info.managementNote || '-')}</span>
+                <button
+                  type="button"
+                  class="weekly-note-pencil"
+                  title="編輯管理備註"
+                  aria-label="編輯管理備註"
+                  onclick="editWeeklyManagementNote(${Number(info.rowIndex)})"
+                >✏️</button>
+              </div>
+            </td>
+            <td style="white-space:nowrap;">
+              <button type="button"
+                class="btn-action btn-delete"
+                onclick="deleteWeeklyReport(${Number(info.rowIndex)})">
+                <span class="delete-x">✕</span> 刪除
+              </button>
+            </td>
+          </tr>`;
+        });
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function normalizeWeeklyStatus(status) {
+      const s = String(status ?? '').trim();
+
+      // 工作表2可能保留前台舊格式，全部明確對應到三種狀態。
+      if (
+        s === '只嗨' ||
+        s === '嗨' ||
+        s === '🥳 只嗨' ||
+        s === '只嗨' ||
+        s === '🥳 只嗨'
+      ) {
+        return '只嗨';
+      }
+
+      if (
+        s === '只酒' ||
+        s === '酒' ||
+        s === '🍷 只酒' ||
+        s === '只酒' ||
+        s === '🍷 只酒'
+      ) {
+        return '只酒';
+      }
+
+      if (
+        s === '都可' ||
+        s === '都可以' ||
+        s === '🎉 都可' ||
+        s === '都可' ||
+        s === '🎉 都可'
+      ) {
+        return '都可';
+      }
+
+      // 無法辨識時保持空值，絕不預設成「都可」。
+      return '';
+    }
+
+    function normalizeWeeklyStatusForSave(status) {
+      return normalizeWeeklyStatus(status);
+    }
+
+    function updateWeeklyReportStatus(rowIndex, newStatus, selectEl) {
+      const numericRowIndex = Number(rowIndex);
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === numericRowIndex);
+
+      if (!info) {
+        alert('找不到這筆每週回報資料，請重新整理後再試一次。');
+        return;
+      }
+
+      const previousStatus = normalizeWeeklyStatus(info.status ?? info.statusMode);
+
+      // 先保留畫面選擇；失敗時再恢復原狀態。
+      if (selectEl) selectEl.disabled = true;
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateWeeklyReport',
+          rowIndex: numericRowIndex,
+          statusMode: normalizeWeeklyStatus(newStatus),
+          note: String(info.note || ''),
+          managementStatus: String(info.managementStatus || ''),
+          managementNote: String(info.managementNote || '')
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          info.status = normalizeWeeklyStatus(newStatus);
+          info.statusMode = info.status;
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        if (selectEl) {
+          const options = Array.from(selectEl.options);
+          const previousOption = options.find(o => o.value === previousStatus);
+          if (previousOption) selectEl.value = previousStatus;
+        }
+        alert('更新週報狀態失敗：' + err.message);
+      })
+      .finally(() => {
+        if (selectEl) selectEl.disabled = false;
+      });
+    }
+
+    function editWeeklyReportNote(rowIndex) {
+      const numericRowIndex = Number(rowIndex);
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === numericRowIndex);
+
+      if (!info) {
+        alert('找不到這筆每週回報資料，請重新整理後再試一次。');
+        return;
+      }
+
+      const newNote = window.prompt('週報備註', String(info.note || ''));
+      if (newNote === null) return;
+
+      const trimmedNote = newNote.trim();
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateWeeklyReport',
+          rowIndex: numericRowIndex,
+          statusMode: normalizeWeeklyStatus(info.status ?? info.statusMode),
+          note: trimmedNote,
+          managementStatus: String(info.managementStatus || '待確認'),
+          managementNote: String(info.managementNote || '')
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          info.note = trimmedNote;
+          renderWeeklyReport();
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('更新週報備註失敗：' + err.message);
+      });
+    }
+
+    function editWeeklyManagementNote(rowIndex) {
+      const numericRowIndex = Number(rowIndex);
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === numericRowIndex);
+
+      if (!info) {
+        alert('找不到這筆每週回報資料，請重新整理後再試一次。');
+        return;
+      }
+
+      const currentNote = String(info.managementNote || '');
+      const newNote = window.prompt('管理備註', currentNote);
+
+      if (newNote === null) return;
+
+      const trimmedNote = newNote.trim();
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateWeeklyReport',
+          rowIndex: numericRowIndex,
+          statusMode: normalizeWeeklyStatus(info.status ?? info.statusMode),
+          note: String(info.note || ''),
+          managementStatus: String(info.managementStatus || '待確認'),
+          managementNote: trimmedNote
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          info.managementNote = trimmedNote;
+          renderWeeklyReport();
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('更新管理備註失敗：' + err.message);
+      });
+    }
+
+    function updateWeeklyManagementStatus(rowIndex, newStatus, selectEl) {
+      const numericRowIndex = Number(rowIndex);
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === numericRowIndex);
+
+      if (!info) {
+        alert('找不到這筆每週回報資料，請重新整理後再試一次。');
+        return;
+      }
+
+      const previousStatus = String(info.managementStatus || '').trim();
+
+      if (selectEl) selectEl.disabled = true;
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateWeeklyReport',
+          rowIndex: numericRowIndex,
+          statusMode: normalizeWeeklyStatus(info.status ?? info.statusMode),
+          note: String(info.note || ''),
+          managementStatus: String(newStatus || ''),
+          managementNote: String(info.managementNote || '')
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          info.managementStatus = newStatus;
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        if (selectEl) selectEl.value = previousStatus || '待確認';
+        alert('更新管理狀態失敗：' + err.message);
+      })
+      .finally(() => {
+        if (selectEl) selectEl.disabled = false;
+      });
+    }
+
+    function deleteWeeklyReport(rowIndex) {
+      const numericRowIndex = Number(rowIndex);
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === numericRowIndex);
+
+      if (!info) {
+        alert('找不到這筆每週回報資料，請重新整理後再試一次。');
+        return;
+      }
+
+      const ok = confirm(
+        `確定要刪除 ${info.name || ''} ${info.date || ''} 的這筆每週回報嗎？\n刪除後無法復原。`
+      );
+
+      if (!ok) return;
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteWeeklyReport',
+          rowIndex: numericRowIndex
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          // 刪除工作表2資料後重新抓取每週回報，保留目前日期篩選。
+          loadWeeklyReports();
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('刪除每週回報失敗：' + err.message);
+      });
+    }
+
+    function saveWeeklyReportEdit() {
+      if (editingWeeklyReportRowIndex === null) return;
+
+      const saveBtn = document.getElementById('saveWeeklyReportEditBtn');
+      const info = weeklyRawData.find(r => Number(r.rowIndex) === Number(editingWeeklyReportRowIndex));
+
+      if (!saveBtn || !info) return;
+
+      // 週報狀態已改為表格內直接下拉調整。
+      // 這裡只編輯週報備註、管理狀態、管理備註。
+      const status = String(info.statusMode || '').trim();
+      const note = document.getElementById('weeklyEditNoteInput')?.value.trim() || '';
+      const managementStatus = document.getElementById('weeklyEditManagementStatusInput')?.value.trim() || '';
+      const managementNote = document.getElementById('weeklyEditManagementNoteInput')?.value.trim() || '';
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = '儲存中...';
+
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateWeeklyReport',
+          rowIndex: editingWeeklyReportRowIndex,
+          statusMode: status,
+          note: note,
+          managementStatus: managementStatus,
+          managementNote: managementNote
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'success') {
+          closeWeeklyReportEditModal();
+          loadAllData();
+        } else {
+          throw new Error(res.message || '未知錯誤');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('儲存每週回報失敗：' + err.message);
+      })
+      .finally(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerText = '儲存';
+      });
     }
 
     function renderHistory() {
@@ -3072,7 +3923,14 @@
     }, 60 * 1000);
 
     function updateStatusModeFromDropdown(selectEl, rowIndex) {
-      const newMode = selectEl.value;
+      const rawMode = selectEl.value;
+      const normalizedMode = normalizeOnlineMode(rawMode);
+      const newMode =
+        normalizedMode === 'OFF'
+          ? 'OFF'
+          : normalizedMode.replace(/^🥳\s*/, '').replace(/^🍷\s*/, '').replace(/^🎉\s*/, '').replace(/^📅\s*/, '').replace(/^🌙\s*/, '');
+
+      if (!newMode) return;
 
       fetch(GAS_URL, {
         method: 'POST',

@@ -305,8 +305,14 @@
     }
 
     .salary-table .salary-self,
+    .salary-table .salary-self-collect,
     .salary-table .salary-fare {
       text-align: left !important;
+    }
+
+    .salary-table .salary-location[readonly] {
+      background: #f7f5f0;
+      cursor: not-allowed;
     }
 
     .salary-table {
@@ -865,6 +871,10 @@
       width: 9% !important;
     }
 
+    .salary-table .col-self-collect {
+      width: 9% !important;
+    }
+
     .salary-table .col-fare {
       width: 9% !important;
     }
@@ -1363,18 +1373,26 @@
           placeholder="🔍 請輸入姓名或關鍵字"
           oninput="renderHistory()"
         >
-        <select id="rangeFilter" onchange="renderHistory()">
-          <option value="daily">當天 (Daily)</option>
-          <option value="weekly">本週 (Weekly)</option>
-          <option value="3months" selected>近三個月 (3 Months)</option>
-        </select>
-        <button
-          class="btn-action btn-add"
-          style="margin-left:auto;"
-          onclick="openAddModal()"
-        >
-          ＋ 管理者補打卡
-        </button>
+        <span style="font-size:0.85rem;color:var(--muted);">開始：</span>
+        <input type="date" id="historyStartDate" onchange="renderHistory()">
+        <span style="font-size:0.85rem;color:var(--muted);">結束：</span>
+        <input type="date" id="historyEndDate" onchange="renderHistory()">
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
+          <button
+            type="button"
+            class="btn-action btn-add"
+            onclick="openAddModal()"
+          >
+            ＋ 管理者補打卡
+          </button>
+          <button
+            type="button"
+            class="btn-action btn-add"
+            onclick="exportHistoryToSalary()"
+          >
+            📤 匯出到薪資計算
+          </button>
+        </div>
       </div>
 
       <div class="table-wrapper">
@@ -1431,6 +1449,7 @@
             <col class="col-time">
             <col class="col-location">
             <col class="col-hourly">
+            <col class="col-self-collect">
             <col class="col-fare">
             <col class="col-hours">
             <col class="col-note">
@@ -1443,6 +1462,7 @@
               <th>下班時間</th>
               <th>地點</th>
               <th>時薪</th>
+              <th>自收</th>
               <th>車資</th>
               <th>時數</th>
               <th>備註</th>
@@ -1460,6 +1480,7 @@
       <div id="salarySummary" style="display:none; margin-top:12px; padding:12px 16px; background:#faf7f3; border:1px solid var(--border); border-radius:8px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
         <div><strong>總時數：</strong><span id="totalHours">0.0</span> hr</div>
         <div><strong>總車資：</strong><span id="totalFare">0</span></div>
+        <div><strong>總自收：</strong><span id="totalSelfCollect">0</span></div>
         <div style="display:flex; align-items:center; gap:6px;">
           <strong>房租：</strong>
           <input id="rentAmount" type="number" min="0" step="1" value="0"
@@ -1653,6 +1674,18 @@
       const endDate = document.getElementById('salaryEndDate');
       if (startDate) startDate.value = getTodayStr();
       if (endDate) endDate.value = getTodayStr();
+
+      const historyStart = document.getElementById('historyStartDate');
+      const historyEnd = document.getElementById('historyEndDate');
+      if (historyStart && historyEnd) {
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        start.setMonth(start.getMonth() - 3);
+        const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        historyStart.value = fmt(start);
+        historyEnd.value = fmt(today);
+      }
+
       loadAllData();
       setInterval(loadAllData, 5000);
     }
@@ -3319,9 +3352,6 @@
     function renderHistory() {
       const tbody = document.getElementById('historyTableBody');
       const keyword = document.getElementById('nameSearchInput').value.trim().toLowerCase();
-      const range = document.getElementById('rangeFilter').value;
-      const todayStr = getTodayStr();
-      const now = new Date();
 
       let filtered = rawData.filter(r => {
         if (!r.name || r.name === '姓名') return false; 
@@ -3330,17 +3360,11 @@
 
         const rDate = new Date(r.date.replace(/-/g, '/'));
 
-        if (range === 'daily') return r.date === todayStr;
-        if (range === 'weekly') {
-          const w = new Date();
-          w.setDate(now.getDate() - 7);
-          return rDate >= w && rDate <= now;
-        }
-        if (range === '3months') {
-          const m = new Date();
-          m.setDate(now.getDate() - 90);
-          return rDate >= m && rDate <= now;
-        }
+        const historyStart = document.getElementById('historyStartDate')?.value || '';
+        const historyEnd = document.getElementById('historyEndDate')?.value || '';
+
+        if (historyStart && r.date < historyStart) return false;
+        if (historyEnd && r.date > historyEnd) return false;
         return true;
       });
 
@@ -3384,7 +3408,87 @@
       });
     }
 
-    function createNewSalaryReport() {
+
+    // ===== 個人打卡紀錄 → 薪資計算 =====
+    // 使用「個人打卡紀錄」目前輸入的姓名與日期範圍，
+    // 自動帶入薪資計算並計算班表；不建立重複資料、不修改原始打卡紀錄。
+    // ===== 個人打卡紀錄日期範圍 =====
+    function getDateStringForHistory(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    // ===== 個人打卡紀錄 → 同步到薪資計算 =====
+    function exportHistoryToSalary() {
+      const nameInput = document.getElementById('nameSearchInput');
+      const startEl = document.getElementById('historyStartDate');
+      const endEl = document.getElementById('historyEndDate');
+
+      const keyword = nameInput ? nameInput.value.trim() : '';
+      const exportStart = startEl ? startEl.value : '';
+      const exportEnd = endEl ? endEl.value : '';
+
+      if (!keyword) {
+        alert('請先在「個人打卡紀錄」輸入姓名。');
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      if (!exportStart || !exportEnd) {
+        alert('請先選擇「開始日期」與「結束日期」。');
+        return;
+      }
+
+      if (exportStart > exportEnd) {
+        alert('開始日期不能晚於結束日期。');
+        return;
+      }
+
+      // 先從目前已載入的打卡資料中確認該姓名在選定區間內確實有資料。
+      const keywordLower = keyword.toLowerCase();
+      const personRecords = rawData.filter(r => {
+        if (!r || !r.name || r.name === '姓名' || r.type === '狀態') return false;
+        if (r.type !== '上班' && r.type !== '下班') return false;
+        if (String(r.name).trim().toLowerCase() !== keywordLower) return false;
+        const d = String(r.date || '').trim();
+        return d >= exportStart && d <= exportEnd;
+      });
+
+      if (!personRecords.length) {
+        alert(`「${keyword}」在 ${exportStart} ～ ${exportEnd} 沒有上／下班打卡資料。`);
+        return;
+      }
+
+      // 帶入薪資計算的姓名與「使用者實際選擇的日期」，
+      // 不再自動改成資料最早／最晚日期。
+      const salaryNameInput = document.getElementById('salaryNameInput');
+      const salaryStartDate = document.getElementById('salaryStartDate');
+      const salaryEndDate = document.getElementById('salaryEndDate');
+
+      if (salaryNameInput) salaryNameInput.value = keyword;
+      if (salaryStartDate) salaryStartDate.value = exportStart;
+      if (salaryEndDate) salaryEndDate.value = exportEnd;
+
+      // 切換到薪資計算後，直接使用相同的 rawData 重新產生薪資班表。
+      switchTab('salaryTab');
+
+      setTimeout(() => {
+        calculateSalary();
+
+        const rows = document.querySelectorAll('#salaryTableBody tr');
+        const hasSalaryRows = Array.from(rows).some(row =>
+          row.querySelector('.salary-row-hours')
+        );
+
+        if (!hasSalaryRows) {
+          alert(`已同步姓名「${keyword}」及日期 ${exportStart} ～ ${exportEnd}，但找不到完整的「上班＋下班」配對。請確認個人打卡紀錄。`);
+        }
+      }, 80);
+    }
+
+        function createNewSalaryReport() {
       const salaryTable = document.getElementById('salaryTable');
       if (salaryTable) salaryTable.classList.add('manual-report-mode');
 
@@ -3447,8 +3551,9 @@
         <td><input type="date" class="salary-date"></td>
         <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
         <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
-        <td><input type="text" class="salary-location" placeholder="地點"></td>
-        <td><input type="number" class="input-money salary-hourly" min="0" step="1" value="0"></td>
+        <td><input type="text" class="salary-location" placeholder="地點" readonly></td>
+        <td><input type="number" class="input-money salary-hourly" min="0" step="1" value="110"></td>
+        <td><input type="number" class="input-money salary-self-collect" min="0" step="1" value="0"></td>
         <td><input type="number" class="input-money salary-fare" min="0" step="1" value="0"></td>
         <td><strong class="salary-row-hours">0.0</strong> hr</td>
         <td><input type="text" class="salary-note-input" placeholder="備註"></td>
@@ -3520,20 +3625,24 @@
       const rows = document.querySelectorAll('#salaryTableBody tr.manual-salary-row');
       let totalHours = 0;
       let totalFare = 0;
+      let totalSelfCollect = 0;
       let totalSalary = 0;
 
       rows.forEach(row => {
         const hoursEl = row.querySelector('.salary-row-hours');
         const hourlyInput = row.querySelector('.salary-hourly');
+        const selfCollectInput = row.querySelector('.salary-self-collect');
         const fareInput = row.querySelector('.salary-fare');
 
         const hours = hoursEl ? parseFloat(hoursEl.textContent) || 0 : 0;
         const hourly = hourlyInput ? parseFloat(hourlyInput.value) || 0 : 0;
+        const selfCollect = selfCollectInput ? parseFloat(selfCollectInput.value) || 0 : 0;
         const fare = fareInput ? parseFloat(fareInput.value) || 0 : 0;
 
         totalHours += hours;
         totalFare += fare;
-        totalSalary += (hours * hourly) + fare;
+        totalSelfCollect += selfCollect;
+        totalSalary += (hours * hourly) + fare - selfCollect;
       });
 
       const rentInput = document.getElementById('rentAmount');
@@ -3546,6 +3655,8 @@
 
       if (totalHoursEl) totalHoursEl.textContent = totalHours.toFixed(1);
       if (totalFareEl) totalFareEl.textContent = totalFare.toFixed(0);
+      const totalSelfCollectEl = document.getElementById('totalSelfCollect');
+      if (totalSelfCollectEl) totalSelfCollectEl.textContent = totalSelfCollect.toFixed(0);
       if (totalAmountEl) totalAmountEl.textContent = totalAmount.toFixed(0);
 
       const summary = document.getElementById('salarySummary');
@@ -3647,7 +3758,7 @@
 
       if (shiftList.length === 0) {
         document.getElementById('salarySummary').style.display = 'none';
-        tbody.innerHTML = '<tr><td colspan="10" class="loading">無對應的完整班表紀錄</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="loading">無對應的完整班表紀錄</td></tr>';
       } else {
         tbody.innerHTML = '';
         shiftList.forEach(s => {
@@ -3663,11 +3774,12 @@
               <td>
                 <div style="display:flex; align-items:center; gap:3px; min-width:0;">
                   <span style="flex:0 0 auto;">${locationMarker}</span>
-                  <input type="text" value="${escapeSalaryHtml(s.location === '-' ? '' : s.location)}" class="salary-location">
+                  <span class="salary-location-display" style="min-width:0; overflow:hidden; text-overflow:ellipsis;">${escapeSalaryHtml(s.location === '-' ? '' : s.location)}</span>
                 </div>
               </td>
-              <td><input type="number" class="input-money salary-self" value="${s.selfCollect}"></td>
-              <td><input type="number" class="input-money salary-fare" value="${s.fare}"></td>
+              <td><input type="number" class="input-money salary-hourly" value="${s.hourly || (String(s.location || '').trim().toLowerCase() === 'sky 9號 9p' ? 100 : 110)}" min="0" step="1"></td>
+              <td><input type="number" class="input-money salary-self-collect" value="0" min="0" step="1"></td>
+              <td><input type="number" class="input-money salary-fare" value="${s.fare}" min="0" step="1"></td>
               <td><strong class="salary-row-hours">${escapeSalaryHtml(s.hours)}</strong> hr</td>
               <td>${escapeSalaryHtml(s.note || '')}</td>
               <td class="manual-only"></td>
@@ -3686,26 +3798,31 @@
       const rows = document.querySelectorAll('#salaryTableBody tr');
       let totalHours = 0;
       let totalFare = 0;
+      let totalSelfCollect = 0;
       let totalSalary = 0;
 
       rows.forEach(row => {
-        const hourlyInput = row.querySelector('.salary-self');
+        const hourlyInput = row.querySelector('.salary-hourly');
+        const selfCollectInput = row.querySelector('.salary-self-collect');
         const fareInput = row.querySelector('.salary-fare');
         const hoursEl = row.querySelector('.salary-row-hours');
 
         const hourly = hourlyInput ? parseFloat(hourlyInput.value) : 0;
+        const selfCollect = selfCollectInput ? parseFloat(selfCollectInput.value) : 0;
         const fare = fareInput ? parseFloat(fareInput.value) : 0;
         const hours = hoursEl ? parseFloat(hoursEl.textContent) : 0;
 
         const safeHourly = Number.isFinite(hourly) ? hourly : 0;
+        const safeSelfCollect = Number.isFinite(selfCollect) ? selfCollect : 0;
         const safeFare = Number.isFinite(fare) ? fare : 0;
         const safeHours = Number.isFinite(hours) ? hours : 0;
 
         totalHours += safeHours;
         totalFare += safeFare;
+        totalSelfCollect += safeSelfCollect;
 
-        // 正確薪資計算：時數 × 時薪 + 車資
-        totalSalary += (safeHours * safeHourly) + safeFare;
+        // 總金額 = 總時數 × 時薪 + 車資 - 自收 - 房租
+        totalSalary += (safeHours * safeHourly) + safeFare - safeSelfCollect;
       });
 
       const rentInput = document.getElementById('rentAmount');
@@ -3716,16 +3833,17 @@
 
       document.getElementById('totalHours').textContent = totalHours.toFixed(1);
       document.getElementById('totalFare').textContent = totalFare.toFixed(0);
+      const totalSelfCollectEl = document.getElementById('totalSelfCollect');
+      if (totalSelfCollectEl) totalSelfCollectEl.textContent = totalSelfCollect.toFixed(0);
       document.getElementById('totalAmount').textContent = totalAmount.toFixed(0);
       document.getElementById('salarySummary').style.display = rows.length ? 'flex' : 'none';
     }
 
     document.addEventListener('input', function(e) {
       if (
-        e.target.classList.contains('salary-self') ||
+        e.target.classList.contains('salary-self-collect') ||
         e.target.classList.contains('salary-fare') ||
         e.target.classList.contains('salary-hourly') ||
-        e.target.classList.contains('salary-fare') ||
         e.target.id === 'rentAmount'
       ) {
         if (e.target.closest('.manual-salary-row')) {

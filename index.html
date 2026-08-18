@@ -855,6 +855,15 @@
       display: table-cell;
     }
 
+    /* 薪資報表匯出後為獨立可編輯副本，操作欄永遠顯示 */
+    .salary-table .salary-action-always { display: table-cell !important; }
+    .salary-table .salary-location-input,
+    .salary-table .salary-note-input {
+      width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+    }
+    .salary-table .salary-location-input,
+    .salary-table .salary-note-input { padding: 6px 7px; }
+
 .salary-table .col-date {
       width: 14% !important;
     }
@@ -1466,7 +1475,7 @@
               <th>車資</th>
               <th>時數</th>
               <th>備註</th>
-              <th class="manual-only">操作</th>
+              <th class="salary-action-always">操作</th>
             </tr>
           </thead>
           <tbody id="salaryTableBody"></tbody>
@@ -3530,6 +3539,15 @@
       }
     }
 
+    function deleteSalaryRow(button) {
+      const row = button ? button.closest('tr') : null;
+      if (!row) return;
+      if (!confirm('確定要刪除這一筆薪資報表資料嗎？')) return;
+      row.remove();
+      updateSalarySummary();
+      updateManualSalarySummary();
+    }
+
     function deleteSalaryManualRow(button) {
       const row = button.closest('tr');
       if (!row) return;
@@ -3762,27 +3780,23 @@
       } else {
         tbody.innerHTML = '';
         shiftList.forEach(s => {
-          const special = /^(sky|9號|9p)$/i.test(String(s.location || '').trim());
-          const locationMarker = special ? '💎' : '📍';
+          const locationValue = s.location === '-' ? '' : String(s.location || '');
+          const hourlyDefault = String(locationValue).trim().toLowerCase() === 'sky 9號 9p' ? 100 : 110;
 
           tbody.innerHTML += `
-            <tr>
-              <td class="manual-only"></td>
+            <tr class="salary-export-row">
               <td><input type="date" value="${escapeSalaryHtml(s.date)}" class="salary-date"></td>
               <td><input type="text" value="${escapeSalaryHtml(s.startTime)}" class="salary-time" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
               <td><input type="text" value="${escapeSalaryHtml(s.endTime)}" class="salary-time" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
-              <td>
-                <div style="display:flex; align-items:center; gap:3px; min-width:0;">
-                  <span style="flex:0 0 auto;">${locationMarker}</span>
-                  <span class="salary-location-display" style="min-width:0; overflow:hidden; text-overflow:ellipsis;">${escapeSalaryHtml(s.location === '-' ? '' : s.location)}</span>
-                </div>
-              </td>
-              <td><input type="number" class="input-money salary-hourly" value="${s.hourly || (String(s.location || '').trim().toLowerCase() === 'sky 9號 9p' ? 100 : 110)}" min="0" step="1"></td>
+              <td><input type="text" class="salary-location-input" value="${escapeSalaryHtml(locationValue)}" placeholder="地點"></td>
+              <td><input type="number" class="input-money salary-hourly" value="${hourlyDefault}" min="0" step="1"></td>
               <td><input type="number" class="input-money salary-self-collect" value="0" min="0" step="1"></td>
-              <td><input type="number" class="input-money salary-fare" value="${s.fare}" min="0" step="1"></td>
+              <td><input type="number" class="input-money salary-fare" value="${s.fare || 0}" min="0" step="1"></td>
               <td><strong class="salary-row-hours">${escapeSalaryHtml(s.hours)}</strong> hr</td>
-              <td>${escapeSalaryHtml(s.note || '')}</td>
-              <td class="manual-only"></td>
+              <td><input type="text" class="salary-note-input" value="${escapeSalaryHtml(s.note || '')}" placeholder="備註"></td>
+              <td class="salary-action-always salary-row-action">
+                <button type="button" class="salary-row-delete" onclick="deleteSalaryRow(this)" title="刪除此筆">✕</button>
+              </td>
             </tr>
           `;
         });

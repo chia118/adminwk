@@ -3558,6 +3558,23 @@
       updateManualSalarySummary();
     }
 
+    function isSpecialSalaryLocation(location) {
+      const key = String(location || '').trim().toLowerCase();
+      return key === 'sky' || key === '9號' || key === '9p' || key === '九號';
+    }
+
+    function applySalaryHourlyByLocation(row) {
+      if (!row) return;
+      const locationInput = row.querySelector('.salary-location-input');
+      const hourlyInput = row.querySelector('.salary-hourly');
+      if (!locationInput || !hourlyInput) return;
+      if (isSpecialSalaryLocation(locationInput.value)) {
+        hourlyInput.value = '100';
+        updateSalarySummary();
+        updateManualSalarySummary();
+      }
+    }
+
     function addBlankSalaryRow() {
       const tbody = document.getElementById('salaryTableBody');
       if (!tbody) return;
@@ -3569,7 +3586,7 @@
         <td><input type="date" class="salary-date"></td>
         <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
         <td><input type="text" class="salary-time" value="00:00" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="^([01]\d|2[0-3]):[0-5]\d$"></td>
-        <td><input type="text" class="salary-location" placeholder="地點" readonly></td>
+        <td><input type="text" class="salary-location-input" placeholder="地點"></td>
         <td><input type="number" class="input-money salary-hourly" min="0" step="1" value="110"></td>
         <td><input type="number" class="input-money salary-self-collect" min="0" step="1" value="0"></td>
         <td><input type="number" class="input-money salary-fare" min="0" step="1" value="0"></td>
@@ -3582,6 +3599,7 @@
 
       tbody.appendChild(row);
       bindManualSalaryRow(row);
+      applySalaryHourlyByLocation(row);
       recalculateManualSalaryRow(row);
     }
 
@@ -3591,7 +3609,10 @@
 
       row.querySelectorAll('input').forEach(input => {
         input.addEventListener('input', () => {
-          if (
+          if (input.classList.contains('salary-location-input')) {
+            applySalaryHourlyByLocation(row);
+            updateManualSalarySummary();
+          } else if (
             input.classList.contains('salary-date') ||
             input.classList.contains('salary-time')
           ) {
@@ -3602,7 +3623,10 @@
         });
 
         input.addEventListener('change', () => {
-          if (
+          if (input.classList.contains('salary-location-input')) {
+            applySalaryHourlyByLocation(row);
+            updateManualSalarySummary();
+          } else if (
             input.classList.contains('salary-date') ||
             input.classList.contains('salary-time')
           ) {
@@ -3781,7 +3805,7 @@
         tbody.innerHTML = '';
         shiftList.forEach(s => {
           const locationValue = s.location === '-' ? '' : String(s.location || '');
-          const hourlyDefault = String(locationValue).trim().toLowerCase() === 'sky 9號 9p' ? 100 : 110;
+          const hourlyDefault = isSpecialSalaryLocation(locationValue) ? 100 : 110;
 
           tbody.innerHTML += `
             <tr class="salary-export-row">
@@ -3801,6 +3825,21 @@
           `;
         });
       }
+
+      document.querySelectorAll('#salaryTableBody .salary-location-input').forEach(input => {
+        if (input.dataset.salaryLocationBound === '1') return;
+        input.dataset.salaryLocationBound = '1';
+        input.addEventListener('input', () => {
+          const row = input.closest('tr');
+          applySalaryHourlyByLocation(row);
+          updateSalarySummary();
+        });
+        input.addEventListener('change', () => {
+          const row = input.closest('tr');
+          applySalaryHourlyByLocation(row);
+          updateSalarySummary();
+        });
+      });
 
       updateSalarySummary();
 

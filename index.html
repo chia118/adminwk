@@ -1942,7 +1942,7 @@
             : '<span class="device-status-badge device-status-unbound">已解除</span>';
 
           const actionHtml = active
-            ? '<button type="button" class="device-unbind-btn" onclick="unbindDevice(' + index + ')">解除綁定</button>'
+            ? '<button type="button" class="device-unbind-btn" onclick="deleteDevice(' + index + ')">刪除</button>'
             : '-';
 
           return '<tr>' +
@@ -1964,7 +1964,7 @@
     // Release the loading lock after each completed request.
     deviceBindingsLoading = false;
 
-    async function unbindDevice(displayIndex) {
+    async function deleteDevice(displayIndex) {
       const bindings = window.currentDeviceBindings || [];
       const item = bindings[displayIndex];
       if (!item) return;
@@ -1972,31 +1972,33 @@
       const name = String(item.name || '').trim();
       const device = String(item.device || item.deviceId || '').trim();
 
-      if (!confirm('確定要解除「' + name + '」的設備綁定嗎？\\n設備：' + device)) {
+      if (!confirm('確定要刪除「' + name + '」的設備紀錄嗎？\\n設備：' + device)) {
         return;
       }
 
       try {
         const rowIndex = Number(item.rowIndex || 0);
         const url =
-          DEVICE_USAGE_GAS_URL_FINAL +
-          '?action=unbindDevice&rowIndex=' + encodeURIComponent(rowIndex);
+          'https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec' +
+          '?action=deleteDevice&rowIndex=' + encodeURIComponent(rowIndex) +
+          '&_=' + Date.now();
 
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error('GAS HTTP ' + response.status);
 
         const result = await response.json();
         if (result.result === 'error' || result.success === false) {
-          throw new Error(result.message || '解除綁定失敗');
+          throw new Error(result.message || '刪除設備紀錄失敗');
         }
 
         await renderDeviceBindings();
 
       } catch (error) {
-        console.error('解除設備綁定失敗：', error);
-        alert(error.message || '解除設備綁定失敗');
+        console.error('刪除設備紀錄失敗：', error);
+        alert(error.message || '刪除設備紀錄失敗');
       }
     }
+
 
     function switchSubTab(subTabId, btn) {
       document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));

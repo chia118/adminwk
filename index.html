@@ -1541,6 +1541,8 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
       </div>
 
+      <div id="weeklyReportPagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin:12px 0;"></div>
+
       <div class="table-wrapper">
         <table class="weekly-report-table">
           <colgroup>
@@ -3053,8 +3055,24 @@ document.addEventListener('DOMContentLoaded', function(){
       return start;
     }
 
-    function loadWeeklyReports() {
-      fetch(GAS_URL + '?action=getWeeklyReports&_=' + Date.now(), {
+    let weeklyReportPage = 1;
+    const WEEKLY_REPORT_PAGE_SIZE = 50;
+    let weeklyReportTotalPages = 0;
+
+    function loadWeeklyReports(page = weeklyReportPage) {
+      weeklyReportPage = Math.max(1, Number(page) || 1);
+      const dateEl = document.getElementById('weeklyReportDateFilter');
+      const nameEl = document.getElementById('weeklyReportNameFilter');
+      const params = new URLSearchParams({
+        action: 'getWeeklyReports',
+        page: String(weeklyReportPage),
+        limit: String(WEEKLY_REPORT_PAGE_SIZE),
+        name: String(nameEl ? nameEl.value : '').trim(),
+        date: String(dateEl ? dateEl.value : '').trim(),
+        _: String(Date.now())
+      });
+
+      fetch(GAS_URL + '?' + params.toString(), {
         method: 'GET',
         cache: 'no-store'
       })
@@ -3081,7 +3099,9 @@ document.addEventListener('DOMContentLoaded', function(){
             })
           : [];
 
+        weeklyReportTotalPages = Number(res.totalPages || 0);
         renderWeeklyReport();
+        renderWeeklyReportPagination();
       })
       .catch(err => {
         console.error('讀取每週回報失敗：', err);
@@ -3095,12 +3115,23 @@ document.addEventListener('DOMContentLoaded', function(){
     let weeklyReportSelectedDate = '';
 
     function filterWeeklyReports() {
-      renderWeeklyReport();
+      loadWeeklyReports(1);
     }
 
     function filterWeeklyReportsByDate(value) {
-      // 保留舊函式名稱，避免其他既有程式呼叫時出錯。
-      renderWeeklyReport();
+      loadWeeklyReports(1);
+    }
+
+    function renderWeeklyReportPagination() {
+      const el = document.getElementById('weeklyReportPagination');
+      if (!el) return;
+      const totalPages = Number(weeklyReportTotalPages || 0);
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+      const prev = weeklyReportPage > 1
+        ? '<button type="button" onclick="loadWeeklyReports(' + (weeklyReportPage - 1) + ')">上一頁</button>' : '';
+      const next = weeklyReportPage < totalPages
+        ? '<button type="button" onclick="loadWeeklyReports(' + (weeklyReportPage + 1) + ')">下一頁</button>' : '';
+      el.innerHTML = prev + '<span style="font-size:.85rem;color:var(--muted);">第 ' + weeklyReportPage + ' / ' + totalPages + ' 頁</span>' + next;
     }
 
     function renderWeeklyReport() {

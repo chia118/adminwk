@@ -2006,91 +2006,29 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
     // ===== 設備使用 =====
-    const DEVICE_BINDINGS_KEY = 'checkin_device_bindings_v1';
+    // 設備使用正式以 GAS → 工作表3 為唯一資料來源。
+    // 不再使用 localStorage，避免舊的 renderDeviceBindings() 把 GAS 讀到的資料覆蓋掉。
+    function renderDeviceBindings() {
+      loadDeviceUsage();
+    }
 
     function getDeviceBindings() {
-      try {
-        const data = JSON.parse(localStorage.getItem(DEVICE_BINDINGS_KEY) || '[]');
-        return Array.isArray(data) ? data : [];
-      } catch (e) {
-        console.error('讀取設備綁定資料失敗：', e);
-        return [];
-      }
+      return Array.isArray(window._deviceUsageRows)
+        ? window._deviceUsageRows
+        : [];
     }
 
     function saveDeviceBindings(bindings) {
-      localStorage.setItem(DEVICE_BINDINGS_KEY, JSON.stringify(bindings || []));
-    }
-
-    function renderDeviceBindings() {
-      const tbody = document.getElementById('deviceTableBody');
-      const countEl = document.getElementById('deviceCount');
-      if (!tbody) return;
-
-      const bindings = getDeviceBindings()
-        .filter(item => item && (item.name || item.deviceId))
-        .sort((a, b) => String(b.boundAt || '').localeCompare(String(a.boundAt || '')));
-
-      if (countEl) countEl.textContent = bindings.filter(item => String(item.status || '啟用') !== '已解除').length;
-
-      if (!bindings.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">目前沒有設備綁定紀錄</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = bindings.map((item, index) => {
-        const name = escapeHtml(String(item.name || ''));
-        const device = escapeHtml(String(item.device || item.deviceId || ''));
-        const boundAt = escapeHtml(String(item.boundAt || ''));
-        const status = String(item.status || '啟用');
-        const active = status !== '已解除';
-        const statusHtml = active
-          ? '<span class="device-status-badge device-status-active">已綁定</span>'
-          : '<span class="device-status-badge device-status-unbound">已解除</span>';
-
-        return `<tr>
-          <td>${name || '-'}</td>
-          <td>${device || '-'}</td>
-          <td>${boundAt || '-'}</td>
-          <td>${statusHtml}</td>
-          <td>
-            ${active
-              ? `<button type="button" class="device-unbind-btn" onclick="unbindDevice(${index})">解除綁定</button>`
-              : '-'}
-          </td>
-        </tr>`;
-      }).join('');
+      // 保留舊介面名稱，但不再寫入 localStorage。
+      return bindings;
     }
 
     function unbindDevice(displayIndex) {
-      const bindings = getDeviceBindings()
-        .filter(item => item && (item.name || item.deviceId))
-        .sort((a, b) => String(b.boundAt || '').localeCompare(String(a.boundAt || '')));
-      const item = bindings[displayIndex];
-      if (!item) return;
-
-      const name = String(item.name || '').trim();
-      const device = String(item.device || item.deviceId || '').trim();
-      if (!confirm(`確定要解除「${name}」的設備綁定嗎？\\n設備：${device}`)) return;
-
-      // Keep the record for history; only change its state.
-      const all = getDeviceBindings();
-      const target = all.find(x =>
-        x === item ||
-        (String(x.name || '').trim() === name &&
-         String(x.device || x.deviceId || '').trim() === device &&
-         String(x.boundAt || '') === String(item.boundAt || ''))
-      );
-      if (target) {
-        target.status = '已解除';
-        target.unboundAt = new Date().toISOString();
-        saveDeviceBindings(all);
-      }
-      renderDeviceBindings();
+      deleteDeviceUsage(displayIndex);
     }
 
     function switchSubTab(subTabId, btn) {
-      if (subTabId === 'deviceSubTab') { loadDeviceUsage(); }
+
 
       document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));

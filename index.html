@@ -1129,6 +1129,39 @@
       border-top: 3px solid #cfc6bd;
     }
 
+
+
+    /* ===== 設備使用 ===== */
+    .device-status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .device-status-active {
+      background: #e8f3ec;
+      color: #3d7a5a;
+    }
+    .device-status-unbound {
+      background: #f5f0ec;
+      color: #8b7d72;
+    }
+    .device-unbind-btn {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .device-unbind-btn:hover {
+      background: #faf9f7;
+      border-color: #d8d0c9;
+    }
+
 </style>
 </head>
 
@@ -1189,6 +1222,9 @@
         </button>
         <button class="sub-tab-btn" onclick="switchSubTab('externalSubTab', this)">
           外部配合 (<span id="externalCount">0</span>)
+        </button>
+        <button class="sub-tab-btn" onclick="switchSubTab('deviceSubTab', this)">
+          設備使用
         </button>
       </div>
 
@@ -1313,6 +1349,31 @@
             <tbody id="externalTableBody">
               <tr>
                 <td colspan="7" class="loading">目前沒有外部配合人員</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 設備使用：目前由前台設備綁定資料寫入 localStorage，後台可查看並解除綁定 -->
+      <div id="deviceSubTab" class="sub-tab-content">
+        <div class="status-section-header">
+          <div class="status-section-title" style="color:#7d6e63;">💻 設備使用</div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>設備</th>
+                <th>綁定時間</th>
+                <th>狀態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="deviceTableBody">
+              <tr>
+                <td colspan="5" class="loading">目前沒有設備綁定紀錄</td>
               </tr>
             </tbody>
           </table>
@@ -1804,6 +1865,91 @@
       }
     }
 
+
+    // ===== 設備使用 =====
+    const DEVICE_BINDINGS_KEY = 'checkin_device_bindings_v1';
+
+    function getDeviceBindings() {
+      try {
+        const data = JSON.parse(localStorage.getItem(DEVICE_BINDINGS_KEY) || '[]');
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        console.error('讀取設備綁定資料失敗：', e);
+        return [];
+      }
+    }
+
+    function saveDeviceBindings(bindings) {
+      localStorage.setItem(DEVICE_BINDINGS_KEY, JSON.stringify(bindings || []));
+    }
+
+    function renderDeviceBindings() {
+      const tbody = document.getElementById('deviceTableBody');
+      const countEl = document.getElementById('deviceCount');
+      if (!tbody) return;
+
+      const bindings = getDeviceBindings()
+        .filter(item => item && (item.name || item.deviceId))
+        .sort((a, b) => String(b.boundAt || '').localeCompare(String(a.boundAt || '')));
+
+      if (countEl) countEl.textContent = bindings.filter(item => String(item.status || '啟用') !== '已解除').length;
+
+      if (!bindings.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">目前沒有設備綁定紀錄</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = bindings.map((item, index) => {
+        const name = escapeHtml(String(item.name || ''));
+        const device = escapeHtml(String(item.device || item.deviceId || ''));
+        const boundAt = escapeHtml(String(item.boundAt || ''));
+        const status = String(item.status || '啟用');
+        const active = status !== '已解除';
+        const statusHtml = active
+          ? '<span class="device-status-badge device-status-active">已綁定</span>'
+          : '<span class="device-status-badge device-status-unbound">已解除</span>';
+
+        return `<tr>
+          <td>${name || '-'}</td>
+          <td>${device || '-'}</td>
+          <td>${boundAt || '-'}</td>
+          <td>${statusHtml}</td>
+          <td>
+            ${active
+              ? `<button type="button" class="device-unbind-btn" onclick="unbindDevice(${index})">解除綁定</button>`
+              : '-'}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function unbindDevice(displayIndex) {
+      const bindings = getDeviceBindings()
+        .filter(item => item && (item.name || item.deviceId))
+        .sort((a, b) => String(b.boundAt || '').localeCompare(String(a.boundAt || '')));
+      const item = bindings[displayIndex];
+      if (!item) return;
+
+      const name = String(item.name || '').trim();
+      const device = String(item.device || item.deviceId || '').trim();
+      if (!confirm(`確定要解除「${name}」的設備綁定嗎？\\n設備：${device}`)) return;
+
+      // Keep the record for history; only change its state.
+      const all = getDeviceBindings();
+      const target = all.find(x =>
+        x === item ||
+        (String(x.name || '').trim() === name &&
+         String(x.device || x.deviceId || '').trim() === device &&
+         String(x.boundAt || '') === String(item.boundAt || ''))
+      );
+      if (target) {
+        target.status = '已解除';
+        target.unboundAt = new Date().toISOString();
+        saveDeviceBindings(all);
+      }
+      renderDeviceBindings();
+    }
+
     function switchSubTab(subTabId, btn) {
       document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
@@ -1819,6 +1965,8 @@
       }
       if (subTabId === 'externalSubTab') {
         renderExternalPeople();
+      } else if (subTabId === 'deviceSubTab') {
+        renderDeviceBindings();
       }
     }
 
@@ -1931,6 +2079,7 @@
 
     function loadAllData() {
       renderExternalPeople();
+      renderDeviceBindings();
       fetch(GAS_URL)
         .then(res => res.json())
         .then(res => {

@@ -1902,7 +1902,9 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(loadDeviceUsa
       document.getElementById(tabId).classList.add('active');
 
       if (tabId === 'weeklyReportTab') {
-        renderWeeklyReport();
+        // 每次進入「每週回報」都重新從工作表2讀取，
+        // 避免只 render 尚未載入的空白 weeklyRawData。
+        loadWeeklyReports();
       }
     }
 

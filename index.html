@@ -1877,6 +1877,30 @@
 
     let deviceBindingsLoading = false;
 
+    // 設備使用：綁定時間只顯示「年月日 時間」
+    function formatDeviceBindTime(raw) {
+      if (!raw) return '';
+      const value = String(raw).trim();
+      if (!value) return '';
+
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+      }
+
+      const match = value.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})/);
+      if (match) {
+        return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')} ${String(match[4]).padStart(2, '0')}:${match[5]}`;
+      }
+
+      return value;
+    }
+
     async function renderDeviceBindings() {
       if (deviceBindingsLoading) return;
       deviceBindingsLoading = true;
@@ -1908,7 +1932,7 @@
           const name = deviceUsageEscapeHtml(item.name || '');
           const device = deviceUsageEscapeHtml(item.device || item.deviceId || '');
           const bindTime = deviceUsageEscapeHtml(
-            item.bindTime || item.boundAt || item.boundTime || ''
+            formatDeviceBindTime(item.bindTime || item.boundAt || item.boundTime || '')
           );
           const status = String(item.status || '已綁定');
           const active = status !== '已解除';

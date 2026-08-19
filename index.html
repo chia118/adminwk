@@ -1176,7 +1176,7 @@ async function loadDeviceUsage(){
   try{
     const res=await fetch(DEVICE_USAGE_GAS_URL+'?action=getDeviceBindings');
     const data=await res.json();
-    const rows=Array.isArray(data)?data:(data.bindings||data.data||[]);
+    const rows=Array.isArray(data)?data:(data.deviceBindings||data.bindings||data.data||[]);
     window._deviceUsageRows=rows;
     if(!rows.length){
       tbody.innerHTML='<tr><td colspan="5" class="loading">目前沒有設備綁定紀錄</td></tr>';
@@ -1196,7 +1196,7 @@ async function unbindDeviceUsage(i){
   const r=(window._deviceUsageRows||[])[i]; if(!r) return;
   if(!confirm('確定要解除「'+String(r.name||'')+'」的設備綁定嗎？')) return;
   try{
-    const res=await fetch(DEVICE_USAGE_GAS_URL+'?action=unbindDevice&device='+encodeURIComponent(r.device||''));
+    const res=await fetch(DEVICE_USAGE_GAS_URL+'?action=unbindDevice&rowIndex='+encodeURIComponent(r.rowIndex||''));
     const data=await res.json();
     if(data && data.success===false) throw new Error(data.message||'解除失敗');
     loadDeviceUsage();

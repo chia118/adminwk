@@ -1163,6 +1163,47 @@
     }
 
 </style>
+
+<script id="deviceUsageIntegration">
+const DEVICE_USAGE_GAS_URL = 'https://script.google.com/macros/s/AKfycbwEJG79ivxM0CrOiRegiZl_qI4Pxf_9BJKxCKyyAYcDc9bq3A3joFrfSiL7ABpq25so/exec';
+function deviceEscapeHtml(s){
+  return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+}
+async function loadDeviceUsage(){
+  const tbody=document.getElementById('deviceUsageTableBody');
+  if(!tbody) return;
+  tbody.innerHTML='<tr><td colspan="5" class="loading">載入中...</td></tr>';
+  try{
+    const res=await fetch(DEVICE_USAGE_GAS_URL+'?action=getDeviceBindings');
+    const data=await res.json();
+    const rows=Array.isArray(data)?data:(data.bindings||data.data||[]);
+    window._deviceUsageRows=rows;
+    if(!rows.length){
+      tbody.innerHTML='<tr><td colspan="5" class="loading">目前沒有設備綁定紀錄</td></tr>';
+      return;
+    }
+    tbody.innerHTML=rows.map(function(r,i){
+      const status=String(r.status||'');
+      const action=status==='已綁定' ? '<button class="btn-edit" type="button" onclick="unbindDeviceUsage('+i+')">解除綁定</button>' : '';
+      return '<tr><td>'+deviceEscapeHtml(r.name||'')+'</td><td>'+deviceEscapeHtml(r.device||'')+'</td><td>'+deviceEscapeHtml(r.bindTime||r.boundTime||'')+'</td><td>'+deviceEscapeHtml(status)+'</td><td>'+action+'</td></tr>';
+    }).join('');
+  }catch(e){
+    console.error(e);
+    tbody.innerHTML='<tr><td colspan="5" class="loading">設備資料讀取失敗</td></tr>';
+  }
+}
+async function unbindDeviceUsage(i){
+  const r=(window._deviceUsageRows||[])[i]; if(!r) return;
+  if(!confirm('確定要解除「'+String(r.name||'')+'」的設備綁定嗎？')) return;
+  try{
+    const res=await fetch(DEVICE_USAGE_GAS_URL+'?action=unbindDevice&device='+encodeURIComponent(r.device||''));
+    const data=await res.json();
+    if(data && data.success===false) throw new Error(data.message||'解除失敗');
+    loadDeviceUsage();
+  }catch(e){alert(e.message||'解除綁定失敗');}
+}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(loadDeviceUsage,500);});
+</script>
 </head>
 
 <body>

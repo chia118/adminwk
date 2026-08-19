@@ -3116,12 +3116,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function loadWeeklyReports() {
-      fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'getWeeklyReports'
-        })
+      fetch(GAS_URL + '?action=getWeeklyReports&_=' + Date.now(), {
+        method: 'GET',
+        cache: 'no-store'
       })
       .then(res => res.json())
       .then(res => {

@@ -1875,7 +1875,11 @@
       });
     }
 
+    let deviceBindingsLoading = false;
+
     async function renderDeviceBindings() {
+      if (deviceBindingsLoading) return;
+      deviceBindingsLoading = true;
       const tbody = document.getElementById('deviceTableBody');
       if (!tbody) return;
 
@@ -1932,6 +1936,9 @@
           '<tr><td colspan="5" class="loading">設備資料讀取失敗，請確認 GAS 部署版本</td></tr>';
       }
     }
+
+    // Release the loading lock after each completed request.
+    deviceBindingsLoading = false;
 
     async function unbindDevice(displayIndex) {
       const bindings = window.currentDeviceBindings || [];
